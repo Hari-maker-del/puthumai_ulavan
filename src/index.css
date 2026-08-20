@@ -1,0 +1,75 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-gray-50 text-[#1F2937] font-sans antialiased;
+  }
+  h1, h2, h3, h4 {
+    @apply font-display tracking-tight;
+  }
+  ::selection {
+    @apply bg-brand-100 text-brand-700;
+  }
+}
+
+@layer utilities {
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+  .animate-shimmer {
+    animation: shimmer 1.8s infinite linear;
+  }
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+}
+
+
+@media print {
+  nav, aside, header, button, [role="navigation"] { display: none !important; }
+  body { background: #fff !important; }
+  main { max-width: none !important; padding: 0 !important; }
+}
+
+/* Puthumai Uzhavan responsive safety layer */
+html, body { overflow-x: hidden; }
+body { min-width: 320px; }
+img, video, canvas, svg { max-width: 100%; }
+button, input, select, textarea { max-width: 100%; }
+input, select, textarea, button { min-height: 44px; }
+table { width: 100%; }
+.overflow-x-auto { -webkit-overflow-scrolling: touch; }
+
+@media (max-width: 640px) {
+  h1 { font-size: clamp(1.5rem, 7vw, 2.1rem); }
+  h2 { font-size: clamp(1.25rem, 6vw, 1.75rem); }
+  h3 { font-size: clamp(1.05rem, 5vw, 1.4rem); }
+  [class*="grid-cols-4"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  [class*="grid-cols-3"] { grid-template-columns: 1fr; }
+  [class*="grid-cols-2"] { grid-template-columns: 1fr; }
+}
+@media (max-width: 420px) {
+  [class*="grid-cols-4"], [class*="grid-cols-3"], [class*="grid-cols-2"] {
+    grid-template-columns: 1fr;
+  }
+  .p-8 { padding: 1rem; }
+  .px-8 { padding-left: 1rem; padding-right: 1rem; }
+  .gap-8 { gap: 1rem; }
+}
+
+/* PU_PRODUCTION_RESPONSIVE */
+html,body,#root{min-width:320px;max-width:100%;overflow-x:hidden}img,video,canvas,svg{max-width:100%;height:auto}button,input,select,textarea{min-height:44px;max-width:100%}@media(max-width:640px){[class*="grid-cols-4"]{grid-template-columns:repeat(2,minmax(0,1fr))}[class*="grid-cols-3"],[class*="grid-cols-2"]{grid-template-columns:1fr}}@media(max-width:420px){[class*="grid-cols-4"]{grid-template-columns:1fr}.p-8{padding:1rem}.px-8{padding-left:1rem;padding-right:1rem}}

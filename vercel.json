@@ -1,11 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
-    "api/*.js": {
-      "maxDuration": 15
-    },
     "api/gemini.js": {
       "maxDuration": 30
+    },
+    "api/weather.js": {
+      "maxDuration": 15
     }
   },
   "rewrites": [

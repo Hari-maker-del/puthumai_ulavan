@@ -1,0 +1,1 @@
+export function searchScore(query:string,title:string,subtitle=''){const q=query.trim().toLowerCase(),t=title.toLowerCase(),s=subtitle.toLowerCase();if(!q)return 0;if(t===q)return 100;if(t.startsWith(q))return 80;if(t.includes(q))return 60;if(s.includes(q))return 40;return 0}

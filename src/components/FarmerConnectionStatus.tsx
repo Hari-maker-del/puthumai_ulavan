@@ -1,0 +1,2 @@
+import{useEffect,useState}from'react';import{connectionState,watchConnection,type ConnectionState}from'@/services/offlineProductionService';
+export function FarmerConnectionStatus(){const[s,setS]=useState<ConnectionState>(connectionState());useEffect(()=>watchConnection(setS),[]);return <div aria-live="polite" className="text-xs opacity-70">{s==='offline'?'Offline — no live requests will be faked.':s==='syncing'?'Syncing…':s==='synced'?'Synced':'Online'}</div>}

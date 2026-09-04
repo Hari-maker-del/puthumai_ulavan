@@ -1,0 +1,1 @@
+import type{CropStage}from'@/services/cropLifecycleService';export function CropStageBadge({stage}:{stage:CropStage}){return <span className="rounded-full border px-3 py-1 text-xs capitalize">{stage.replace('_',' ')}</span>}

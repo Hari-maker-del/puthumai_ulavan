@@ -1,0 +1,2 @@
+export type IrrigationSchedule={id:string;userId:string;fieldId:string;cropId?:string|null;scheduledAt:string;durationMinutes:number;waterLitres?:number|null;status:'planned'|'completed'|'skipped'};
+export function validateIrrigation(x:IrrigationSchedule){if(x.durationMinutes<=0)throw new Error('Irrigation duration must be positive.');if(x.waterLitres!=null&&x.waterLitres<0)throw new Error('Water amount cannot be negative.');return x}

@@ -1,0 +1,1 @@
+export function reportRuntimeError(error:unknown,route=location.pathname){const e=error instanceof Error?error:new Error(String(error));const event={message:e.message,route,stack:e.stack,timestamp:new Date().toISOString()};if(import.meta.env.DEV)console.error('[runtime]',event);return event}

@@ -1,0 +1,1 @@
+export function validateYield(value:unknown,confidence?:unknown){const v=Number(value);if(!Number.isFinite(v)||v<0)throw new Error('Invalid yield estimate.');if(confidence!=null){const c=Number(confidence);if(!Number.isFinite(c)||c<0||c>1)throw new Error('Invalid confidence.')}return{value:v,confidence:confidence==null?null:Number(confidence)}}

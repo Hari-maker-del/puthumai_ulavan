@@ -2,15 +2,13 @@ import { supabase } from '@/lib/supabase';
 import { askGeminiWithImage } from '@/services/geminiService';
 import type { ScannerRequest, ScannerResponse, ScanResult, CropScanHistoryRow } from '@/services/types';
 
-// Production-safe default: mock scanning is opt-in only.
+const LOCAL_HISTORY_PREFIX = 'puthumai-ulavan:crop-scans:';
 
 function parseJsonFromGemini(responseText: string): string {
   const jsonBlockMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/i);
   const candidate = jsonBlockMatch ? jsonBlockMatch[1] : responseText;
   const objectMatch = candidate.match(/\{[\s\S]*\}/);
-  if (!objectMatch) {
-    throw new Error('Gemini response did not include valid JSON.');
-  }
+  if (!objectMatch) throw new Error('Gemini response did not include valid JSON.');
   return objectMatch[0];
 }
 
@@ -28,9 +26,7 @@ function normalizeStatus(disease: string | null, severity: ScanResult['severity'
 }
 
 function parseGeminiScanResponse(responseText: string, crop: string, field: string): ScannerResponse {
-  const jsonText = parseJsonFromGemini(responseText);
-  const parsed = JSON.parse(jsonText) as Record<string, unknown>;
-
+  const parsed = JSON.parse(parseJsonFromGemini(responseText)) as Record<string, unknown>;
   const disease = parsed.disease === null ? null : String(parsed.disease ?? '').trim() || null;
   const diseaseConfidence = Number(parsed.disease_confidence ?? parsed.diseaseConfidence ?? 0);
   const nutrientDeficiency = String(parsed.nutrient_deficiency ?? parsed.nutrientDeficiency ?? 'None').trim();
@@ -44,19 +40,17 @@ function parseGeminiScanResponse(responseText: string, crop: string, field: stri
   const severity = normalizeSeverity(parsed.severity ?? (disease ? 'Moderate' : 'None'));
   const status = normalizeStatus(disease, severity);
 
-  const result: ScanResult = {
-    crop,
-    field,
-    date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
-    disease,
-    confidence: Math.round(Math.min(100, Math.max(0, overallConfidence || diseaseConfidence || 0))),
-    severity,
-    treatment: recommendation,
-    status,
-  };
-
   return {
-    result,
+    result: {
+      crop,
+      field,
+      date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
+      disease,
+      confidence: Math.round(Math.min(100, Math.max(0, overallConfidence || diseaseConfidence || 0))),
+      severity,
+      treatment: recommendation,
+      status,
+    },
     analysis: {
       disease,
       diseaseConfidence: Math.round(Math.min(100, Math.max(0, diseaseConfidence || overallConfidence || 0))),
@@ -74,32 +68,45 @@ function parseGeminiScanResponse(responseText: string, crop: string, field: stri
 
 function buildScanPrompt(crop: string, field: string) {
   return `Analyze the attached leaf image from a ${crop} field named "${field}". Provide only valid JSON with exactly these keys:\n` +
-    `{
-` +
-    `  "disease": string | null,
-` +
-    `  "disease_confidence": number,
-` +
-    `  "nutrient_deficiency": string,
-` +
-    `  "nutrient_confidence": number,
-` +
-    `  "water_stress": "None" | "Low" | "Moderate" | "High",
-` +
-    `  "water_confidence": number,
-` +
-    `  "pest_risk": "None" | "Low" | "Moderate" | "High",
-` +
-    `  "pest_confidence": number,
-` +
-    `  "recommendation": string,
-` +
-    `  "overall_confidence": number,
-` +
-    `  "severity": "None" | "Low" | "Moderate" | "High"
-` +
-    `}\n` +
+    `{"disease": string | null, "disease_confidence": number, "nutrient_deficiency": string, "nutrient_confidence": number, "water_stress": "None" | "Low" | "Moderate" | "High", "water_confidence": number, "pest_risk": "None" | "Low" | "Moderate" | "High", "pest_confidence": number, "recommendation": string, "overall_confidence": number, "severity": "None" | "Low" | "Moderate" | "High"}\n` +
     `If there is no disease, set "disease" to null and "severity" to "None". Do not include any extra text outside the JSON object.`;
+}
+
+function isCropScansTableUnavailable(error: unknown): boolean {
+  const candidate = error as { code?: string; message?: string; details?: string } | null;
+  const text = `${candidate?.code ?? ''} ${candidate?.message ?? ''} ${candidate?.details ?? ''}`.toLowerCase();
+  return candidate?.code === 'PGRST205' || candidate?.code === '42P01' || text.includes('crop_scans') && (text.includes('schema cache') || text.includes('does not exist') || text.includes('not found'));
+}
+
+function localHistoryKey(userId: string): string {
+  return `${LOCAL_HISTORY_PREFIX}${userId}`;
+}
+
+function readLocalHistory(userId: string): CropScanHistoryRow[] {
+  try {
+    const raw = localStorage.getItem(localHistoryKey(userId));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as CropScanHistoryRow[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeLocalHistory(userId: string, scan: ScanResult): CropScanHistoryRow {
+  const row: CropScanHistoryRow = {
+    ...scan,
+    id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    user_id: userId,
+    created_at: new Date().toISOString(),
+  };
+  try {
+    const rows = [row, ...readLocalHistory(userId)].slice(0, 50);
+    localStorage.setItem(localHistoryKey(userId), JSON.stringify(rows));
+  } catch {
+    // Keep the scan result usable even when browser storage is unavailable.
+  }
+  return row;
 }
 
 export async function scanCrop(payload: ScannerRequest): Promise<ScannerResponse> {
@@ -125,9 +132,15 @@ export async function saveCropScanHistory(userId: string, scan: ScanResult): Pro
     date: scan.date,
   });
 
-  if (error) {
-    throw new Error(error.message);
+  if (!error) return;
+
+  // A missing Supabase table must not prevent the AI scanner from working.
+  // Keep the result locally until the database migration is applied.
+  if (isCropScansTableUnavailable(error)) {
+    writeLocalHistory(userId, scan);
+    return;
   }
+  throw new Error(error.message);
 }
 
 export async function getCropScanHistory(userId: string): Promise<CropScanHistoryRow[]> {
@@ -138,21 +151,22 @@ export async function getCropScanHistory(userId: string): Promise<CropScanHistor
     .order('created_at', { ascending: false })
     .limit(8);
 
-  if (error) {
-    throw new Error(error.message);
+  if (!error) {
+    return (data ?? []).map((row) => ({
+      id: String((row as Partial<CropScanHistoryRow> & Record<string, unknown>).id ?? ''),
+      user_id: String((row as Partial<CropScanHistoryRow> & Record<string, unknown>).user_id ?? ''),
+      crop: String((row as Record<string, unknown>).crop ?? 'Unknown'),
+      field: String((row as Record<string, unknown>).field ?? 'Field'),
+      date: String((row as Record<string, unknown>).date ?? new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })),
+      disease: (row as Record<string, unknown>).disease === null ? null : String((row as Record<string, unknown>).disease ?? 'None'),
+      confidence: Number((row as Record<string, unknown>).confidence ?? 0),
+      severity: normalizeSeverity((row as Record<string, unknown>).severity ?? 'None'),
+      treatment: String((row as Record<string, unknown>).treatment ?? 'No recommendation available.'),
+      status: String((row as Record<string, unknown>).status ?? 'Healthy') as ScanResult['status'],
+      created_at: (row as Record<string, unknown>).created_at ? String((row as Record<string, unknown>).created_at) : undefined,
+    }));
   }
 
-  return (data ?? []).map((row) => ({
-    id: String((row as Partial<CropScanHistoryRow> & Record<string, unknown>).id ?? ''),
-    user_id: String((row as Partial<CropScanHistoryRow> & Record<string, unknown>).user_id ?? ''),
-    crop: String((row as Record<string, unknown>).crop ?? 'Unknown'),
-    field: String((row as Record<string, unknown>).field ?? 'Field'),
-    date: String((row as Record<string, unknown>).date ?? new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })),
-    disease: (row as Record<string, unknown>).disease === null ? null : String((row as Record<string, unknown>).disease ?? 'None'),
-    confidence: Number((row as Record<string, unknown>).confidence ?? 0),
-    severity: normalizeSeverity((row as Record<string, unknown>).severity ?? 'None'),
-    treatment: String((row as Record<string, unknown>).treatment ?? 'No recommendation available.'),
-    status: String((row as Record<string, unknown>).status ?? 'Healthy') as ScanResult['status'],
-    created_at: (row as Record<string, unknown>).created_at ? String((row as Record<string, unknown>).created_at) : undefined,
-  }));
+  if (isCropScansTableUnavailable(error)) return readLocalHistory(userId);
+  throw new Error(error.message);
 }

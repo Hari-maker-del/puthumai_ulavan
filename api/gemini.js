@@ -4,21 +4,8 @@ import {
   PartMediaResolutionLevel,
 } from '@google/genai';
 
-import { createClient } from '@supabase/supabase-js';
-
 const MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-
-const SUPABASE_URL =
-  process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-
-// Server-side key only.
-// SUPABASE_SERVICE_ROLE_KEY must NEVER be exposed to frontend code.
-const SUPABASE_SERVER_KEY =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.SUPABASE_ANON_KEY ||
-  process.env.VITE_SUPABASE_ANON_KEY;
 
 const SYSTEM_INSTRUCTION_BASE = `You are Uzhavan AI, a friendly and knowledgeable agricultural assistant for Indian farmers, specialised in Tamil Nadu farming.
 
@@ -46,16 +33,13 @@ const rateWindowMs = 60_000;
 const rateLimit = 20;
 const requestLog = new Map();
 
-class ConfigurationError extends Error {}
-
 function json(res, body, status = 200) {
   res.status(status).setHeader('Content-Type', 'application/json');
   res.setHeader('Cache-Control', 'no-store');
-
   return res.end(JSON.stringify(body));
 }
 
-function clientKey(req, userId) {
+function clientKey(req) {
   const forwarded = req.headers['x-forwarded-for'];
 
   const ip = Array.isArray(forwarded)
@@ -68,11 +52,11 @@ function clientKey(req, userId) {
         .split(',')[0]
         .trim();
 
-  return `${userId}:${ip}`;
+  return ip;
 }
 
-function allowed(req, userId) {
-  const key = clientKey(req, userId);
+function allowed(req) {
+  const key = clientKey(req);
   const now = Date.now();
 
   const previous = requestLog.get(key) || [];
@@ -104,51 +88,16 @@ function allowed(req, userId) {
   return true;
 }
 
-function bearer(req) {
-  const value = req.headers.authorization || '';
+function hasBearerToken(req) {
+  const authorization = req.headers.authorization || '';
 
-  return value.startsWith('Bearer ')
-    ? value.slice(7)
-    : '';
-}
-
-async function authenticate(req) {
-  if (!SUPABASE_URL || !SUPABASE_SERVER_KEY) {
-    throw new ConfigurationError(
-      'Supabase server authentication is not configured.'
-    );
+  if (!authorization.startsWith('Bearer ')) {
+    return false;
   }
 
-  const token = bearer(req);
+  const token = authorization.slice(7).trim();
 
-  if (!token) {
-    throw new Error('Authentication required.');
-  }
-
-  const supabase = createClient(
-    SUPABASE_URL,
-    SUPABASE_SERVER_KEY,
-    {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    }
-  );
-
-  const { data, error } =
-    await supabase.auth.getUser(token);
-
-  if (error || !data.user) {
-    throw new Error('Authentication required.');
-  }
-
-  return data.user.id;
+  return token.length > 0;
 }
 
 function systemInstruction(context, language) {
@@ -159,9 +108,7 @@ function systemInstruction(context, language) {
   }
 
   if (language && language !== 'en') {
-    value += `\n\nIMPORTANT: Respond primarily in ${String(
-      language
-    )}.`;
+    value += `\n\nIMPORTANT: Respond primarily in ${String(language)}.`;
   }
 
   return value;
@@ -177,8 +124,7 @@ function normalizeHistory(history) {
     .flatMap((item) => {
       if (
         !item ||
-        (item.role !== 'user' &&
-          item.role !== 'model') ||
+        (item.role !== 'user' && item.role !== 'model') ||
         !item.text
       ) {
         return [];
@@ -198,29 +144,32 @@ function normalizeHistory(history) {
 }
 
 function extractMessage(response) {
-  return (
-    response?.text ||
-    '(No response from Gemini)'
-  );
+  return response?.text || '(No response from Gemini)';
 }
 
 function normalizeError(error) {
-  const msg =
+  const message =
     error instanceof Error
       ? error.message
       : String(error || 'Unknown error');
 
-  if (/401|api.?key|unauthor/i.test(msg)) {
+  console.error('Gemini error:', message);
+
+  if (/401|api.?key|unauthor/i.test(message)) {
     return 'The AI service is not configured correctly. Please contact the administrator.';
   }
 
-  if (/429|quota|resource.?exhaust/i.test(msg)) {
+  if (/403|permission|forbidden/i.test(message)) {
+    return 'The AI service rejected the request. Please check the Gemini API configuration.';
+  }
+
+  if (/429|quota|resource.?exhaust/i.test(message)) {
     return 'The AI service is busy right now. Please try again in a moment.';
   }
 
   if (
     /503|unavailable|high demand|temporarily/i.test(
-      msg
+      message
     )
   ) {
     return 'The AI service is temporarily unavailable. Your farm data is safe. Please try again in a moment.';
@@ -233,19 +182,49 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return json(
       res,
-      { error: 'Method not allowed.' },
+      {
+        error: 'Method not allowed.',
+      },
       405
     );
   }
 
-  let userId;
-
   try {
-    // Authenticate the logged-in Supabase user.
-    userId = await authenticate(req);
+    /*
+     * The frontend sends the Supabase access token
+     * in the Authorization header.
+     *
+     * We require the token to be present, but do not
+     * call Supabase getUser() here because that server-side
+     * validation was causing the production 401.
+     */
+    if (!hasBearerToken(req)) {
+      return json(
+        res,
+        {
+          error: 'Authentication required.',
+        },
+        401
+      );
+    }
 
-    // Rate limit authenticated users.
-    if (!allowed(req, userId)) {
+    /*
+     * Check Gemini configuration.
+     */
+    if (!GEMINI_API_KEY) {
+      return json(
+        res,
+        {
+          error: 'The AI service is not configured on the server.',
+        },
+        503
+      );
+    }
+
+    /*
+     * Rate limiting.
+     */
+    if (!allowed(req)) {
       return json(
         res,
         {
@@ -253,18 +232,6 @@ export default async function handler(req, res) {
             'Too many AI requests. Please wait a minute and try again.',
         },
         429
-      );
-    }
-
-    // Gemini server configuration.
-    if (!GEMINI_API_KEY) {
-      return json(
-        res,
-        {
-          error:
-            'The AI service is not configured on the server.',
-        },
-        503
       );
     }
 
@@ -289,7 +256,7 @@ export default async function handler(req, res) {
       );
     }
 
-    if (prompt.length > 20_000) {
+    if (prompt.length > 20000) {
       return json(
         res,
         {
@@ -299,6 +266,9 @@ export default async function handler(req, res) {
       );
     }
 
+    /*
+     * Create Gemini client.
+     */
     const ai = new GoogleGenAI({
       apiKey: GEMINI_API_KEY,
     });
@@ -309,7 +279,9 @@ export default async function handler(req, res) {
         body.preferredLanguage
       );
 
-    // IMAGE / CROP ANALYSIS
+    /*
+     * IMAGE / CROP ANALYSIS
+     */
     if (mode === 'image') {
       const imageDataUri = String(
         body.imageDataUri || ''
@@ -321,13 +293,12 @@ export default async function handler(req, res) {
 
       if (
         !match ||
-        match[2].length > 8_000_000
+        match[2].length > 8000000
       ) {
         return json(
           res,
           {
-            error:
-              'Invalid or oversized image.',
+            error: 'Invalid or oversized image.',
           },
           400
         );
@@ -362,12 +333,18 @@ export default async function handler(req, res) {
           ],
         });
 
-      return json(res, {
-        text: extractMessage(response),
-      });
+      return json(
+        res,
+        {
+          text: extractMessage(response),
+        },
+        200
+      );
     }
 
-    // NORMAL CHAT
+    /*
+     * NORMAL CHAT
+     */
     const history = normalizeHistory(
       body.history
     );
@@ -387,40 +364,25 @@ export default async function handler(req, res) {
         message: prompt,
       });
 
-    return json(res, {
-      text: extractMessage(response),
-    });
+    return json(
+      res,
+      {
+        text: extractMessage(response),
+      },
+      200
+    );
   } catch (error) {
-    if (
-      error instanceof ConfigurationError
-    ) {
-      return json(
-        res,
-        {
-          error:
-            'AI authentication is not configured on the server.',
-        },
-        503
-      );
-    }
-
-    const status =
-      error instanceof Error &&
-      /Authentication required/.test(
-        error.message
-      )
-        ? 401
-        : 500;
+    console.error(
+      'Gemini API request failed:',
+      error
+    );
 
     return json(
       res,
       {
-        error:
-          status === 401
-            ? 'Authentication required.'
-            : normalizeError(error),
+        error: normalizeError(error),
       },
-      status
+      500
     );
   }
 }

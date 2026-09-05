@@ -2,9 +2,9 @@ export interface FarmHealthInputs {
   averageCropHealth?: number;
   openHighPriorityTasks?: number;
   activeAlerts?: number;
-  expensePressure?: number; // 0..1, where 1 is high pressure
-  dataCompleteness?: number; // 0..1
-  weatherRisk?: number; // 0..1
+  expensePressure?: number;
+  dataCompleteness?: number;
+  weatherRisk?: number;
 }
 
 export interface FarmHealthScore {
@@ -16,12 +16,22 @@ export interface FarmHealthScore {
 const clamp = (n: number) => Math.max(0, Math.min(100, n));
 
 export function calculateFarmHealth(inputs: FarmHealthInputs): FarmHealthScore {
-  const crop = clamp(inputs.averageCropHealth ?? 70);
-  const tasks = clamp(100 - (inputs.openHighPriorityTasks ?? 0) * 15);
-  const alerts = clamp(100 - (inputs.activeAlerts ?? 0) * 12);
-  const expenses = clamp(100 - (inputs.expensePressure ?? 0) * 100);
-  const data = clamp((inputs.dataCompleteness ?? 0.7) * 100);
-  const weather = clamp(100 - (inputs.weatherRisk ?? 0.2) * 100);
+  const crop = clamp(inputs.averageCropHealth ?? 0);
+  const tasks = inputs.openHighPriorityTasks === undefined
+    ? 0
+    : clamp(100 - inputs.openHighPriorityTasks * 15);
+  const alerts = inputs.activeAlerts === undefined
+    ? 0
+    : clamp(100 - inputs.activeAlerts * 12);
+  const expenses = inputs.expensePressure === undefined
+    ? 0
+    : clamp(100 - inputs.expensePressure * 100);
+  const data = inputs.dataCompleteness === undefined
+    ? 0
+    : clamp(inputs.dataCompleteness * 100);
+  const weather = inputs.weatherRisk === undefined
+    ? 0
+    : clamp(100 - inputs.weatherRisk * 100);
 
   const factors = [
     { name: 'Crop health', score: crop, weight: 0.30, detail: 'Average health of monitored fields.' },
@@ -32,7 +42,7 @@ export function calculateFarmHealth(inputs: FarmHealthInputs): FarmHealthScore {
     { name: 'Weather risk', score: weather, weight: 0.15, detail: 'Current weather risk is reflected in the score.' },
   ];
 
-  const score = Math.round(factors.reduce((sum, f) => sum + f.score * f.weight, 0));
+  const score = Math.round(factors.reduce((sum, factor) => sum + factor.score * factor.weight, 0));
   const label = score >= 85 ? 'Excellent' : score >= 70 ? 'Good' : score >= 50 ? 'Watch' : 'At Risk';
   return { score, label, factors };
 }

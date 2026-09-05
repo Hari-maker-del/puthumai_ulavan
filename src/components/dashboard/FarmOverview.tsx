@@ -29,7 +29,6 @@ export default function FarmOverview() {
   const { data, loading, error } = useFarms(user?.id);
 
   // Prevent null crash
-  // Stabilise the farms array so the useEffect below doesn't re-run on every render.
   const farms = useMemo(() => (Array.isArray(data) ? data : []), [data]);
   const [fieldCounts, setFieldCounts] = useState<Record<string, number>>({});
 

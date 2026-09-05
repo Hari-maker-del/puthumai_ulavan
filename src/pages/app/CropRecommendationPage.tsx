@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sprout, MapPin, FlaskConical, Droplets, Thermometer, CloudRain,
@@ -104,11 +104,13 @@ export default function CropRecommendationPage() {
 
     if (!form.soilType || !form.district || !form.state || !form.season || !form.waterSource) {
       toast('Complete the soil, location, season and water fields before generating a recommendation.', 'error');
+      setLoading(false);
       return;
     }
     const numericFields = [form.soilPH, form.rainfall, form.temperature, form.humidity, form.landSize];
     if (numericFields.some((value) => value === '' || !Number.isFinite(Number(value)))) {
       toast('Enter valid numeric farm and weather values before generating a recommendation.', 'error');
+      setLoading(false);
       return;
     }
 

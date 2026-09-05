@@ -47,6 +47,8 @@ export default function FarmProfilePage() {
   const [formError, setFormError] = useState<string | null>(null);
 
   const totalAcreage = useMemo(() => farms.reduce((sum, farm) => sum + Number(farm.area || 0), 0), [farms]);
+  const seasonsCompleted = useMemo(() => farms.filter((farm) => farm.status === 'Harvested').length, [farms]);
+  const soilRecords = useMemo(() => farms.filter((farm) => Boolean(farm.soil_type)).length, [farms]);
   const uniqueCrops = useMemo(() => Array.from(new Set(farms.map((farm) => farm.crop).filter(Boolean))).sort(), [farms]);
   const filteredFarms = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -212,8 +214,8 @@ export default function FarmProfilePage() {
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatTile icon={Layers} label="Total Land" value={`${totalAcreage.toFixed(1)} ac`} sub="under cultivation" accent="from-brand-500 to-brand-700" />
         <StatTile icon={Sprout} label="Active Farms" value={`${farms.filter((farm) => farm.status === 'Active').length}`} sub="currently active" accent="from-accent-500 to-accent-700" delay={0.06} />
-        <StatTile icon={CalendarRange} label="Seasons Done" value={`${farmerProfile.seasonsCompleted}`} sub="completed seasons" accent="from-emerald-500 to-emerald-700" delay={0.12} />
-        <StatTile icon={FlaskConical} label="Soil Records" value={`${soilInfo.length}`} sub="farms with soil data" accent="from-amber-500 to-amber-600" delay={0.18} />
+        <StatTile icon={CalendarRange} label="Seasons Done" value={`${seasonsCompleted}`} sub="completed seasons" accent="from-emerald-500 to-emerald-700" delay={0.12} />
+        <StatTile icon={FlaskConical} label="Soil Records" value={`${soilRecords}`} sub="farms with soil data" accent="from-amber-500 to-amber-600" delay={0.18} />
       </div>
 
       {/* Current crops */}

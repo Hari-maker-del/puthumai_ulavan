@@ -4,8 +4,6 @@ import type {
 } from '@supabase/supabase-js';
 import { supabase, supabaseMisconfigured } from '@/lib/supabase';
 
-let channelCounter = 0;
-
 export type RealtimeStatus =
   | 'DISABLED'
   | 'CONNECTING'
@@ -27,6 +25,8 @@ export interface RealtimeHandle {
   unsubscribe: () => Promise<void>;
 }
 
+let channelCounter = 0;
+
 export function subscribeToTable(
   options: RealtimeSubscriptionOptions,
 ): RealtimeHandle {
@@ -43,9 +43,10 @@ export function subscribeToTable(
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let reconnectAttempt = 0;
 
-  const channelId = ++channelCounter;
-  const channelName =
-    `realtime:${options.table}:${options.filter ?? 'all'}:${channelId}:${Date.now()}`;
+  const subscriptionId = ++channelCounter;
+
+  const createChannelName = () =>
+    `realtime:${options.table}:${options.filter ?? 'all'}:${subscriptionId}:${Date.now()}`;
 
   const cleanupChannel = async () => {
     const currentChannel = channel;
@@ -94,7 +95,7 @@ export function subscribeToTable(
       reconnectAttempt > 0 ? 'RECONNECTING' : 'CONNECTING',
     );
 
-    const newChannel = supabase.channel(channelName);
+    const newChannel = supabase.channel(createChannelName());
 
     channel = newChannel;
 

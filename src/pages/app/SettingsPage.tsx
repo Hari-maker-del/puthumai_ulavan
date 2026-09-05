@@ -18,9 +18,9 @@ type SettingGroup = { title: string; items: SettingItem[] };
 const defaultSettingGroups: SettingGroup[] = [
   { title: 'Notifications', items: [
     { icon: 'Bell', label: 'Weather alerts', value: 'On', toggle: true, on: true },
-    { icon: '', label: 'Crop alerts', value: 'On', toggle: true, on: true },
-    { icon: '', label: 'Expense alerts', value: 'On', toggle: true, on: true },
-    { icon: '', label: 'Market alerts', value: 'On', toggle: true, on: true },
+    { icon: 'Leaf', label: 'Crop alerts', value: 'On', toggle: true, on: true },
+    { icon: 'Wallet', label: 'Expense alerts', value: 'On', toggle: true, on: true },
+    { icon: 'TrendingUp', label: 'Market alerts', value: 'On', toggle: true, on: true },
   ] },
   { title: 'Security', items: [
     { icon: 'Shield', label: 'Authenticated account', value: 'Protected by Supabase Auth' },

@@ -32,11 +32,11 @@ export function buildFarmActions(context: CopilotContext): FarmAction[] {
       });
     }
 
-    if (weather.temp >= 35) {
+    if (weather.today.temp >= 35) {
       actions.push({
         id: 'heat',
         title: 'Check heat stress',
-        detail: `${weather.temp}°C is hot. Inspect leaves and soil moisture during the cooler part of the day.`,
+        detail: `${weather.today.temp}°C is hot. Inspect leaves and soil moisture during the cooler part of the day.`,
         priority: 'high', source: 'weather',
       });
     }

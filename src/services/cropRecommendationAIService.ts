@@ -18,12 +18,7 @@ const ALLOWED_CROPS = Object.keys(COLORS);
 
 function marketCropKey(value: string) {
   const key = value.trim().toLowerCase();
-  const aliases: Record<string, string> = {
-    paddy: 'rice', rice: 'rice',
-    urad: 'black gram', 'black gram': 'black gram',
-    peanut: 'groundnut', groundnut: 'groundnut',
-    corn: 'maize', maize: 'maize',
-  };
+  const aliases: Record<string, string> = { paddy: 'rice', rice: 'rice', urad: 'black gram', 'black gram': 'black gram', peanut: 'groundnut', groundnut: 'groundnut', corn: 'maize', maize: 'maize' };
   return aliases[key] ?? key;
 }
 
@@ -32,15 +27,7 @@ function parseJson(text: string): unknown {
   const candidate = fenced?.[1] ?? text;
   const object = candidate.match(/\{[\s\S]*\}/);
   if (!object) throw new Error('AI recommendation did not return valid JSON.');
-  try {
-    return JSON.parse(object[0]);
-  } catch {
-    // Log the raw response in development so format issues are easy to trace.
-    if (import.meta.env.DEV) {
-      console.warn('[cropRecommendationAI] Failed to parse Gemini response:', text);
-    }
-    throw new Error('AI recommendation returned malformed JSON. Please try again.');
-  }
+  return JSON.parse(object[0]);
 }
 
 function clamp(value: unknown, min = 0, max = 100) {
@@ -52,19 +39,9 @@ function normalizeList(value: unknown) {
   return Array.isArray(value) ? value.map(String).filter(Boolean).slice(0, 6) : [];
 }
 
-function normalizeRecommendation(
-  raw: Record<string, unknown>,
-  market: MarketPrice[],
-): CropRecommendation | null {
+function normalizeRecommendation(raw: Record<string, unknown>, market: MarketPrice[]): CropRecommendation {
   const crop = String(raw.crop ?? '').trim();
-  if (!ALLOWED_CROPS.includes(crop)) {
-    // Gracefully skip unknown crops instead of throwing — allows the remaining
-    // valid crops in the batch to still be returned to the farmer.
-    if (import.meta.env.DEV) {
-      console.warn(`[cropRecommendationAI] Skipping unsupported crop from AI: "${crop}"`);
-    }
-    return null;
-  }
+  if (!ALLOWED_CROPS.includes(crop)) throw new Error(`AI returned unsupported crop: ${crop || 'unknown'}.`);
 
   const marketRows = market.filter((row) => marketCropKey(row.crop) === marketCropKey(crop));
   const hasVerifiedMarket = marketRows.length > 0;
@@ -78,13 +55,10 @@ function normalizeRecommendation(
     expectedYield: String(raw.expectedYield ?? 'Unavailable'),
     expectedRevenue: hasVerifiedMarket ? clamp(raw.expectedRevenue, 0, 1_000_000_000) : 0,
     expectedProfit: hasVerifiedMarket ? clamp(raw.expectedProfit, 0, 1_000_000_000) : 0,
-    marketDemand: ['High', 'Medium', 'Low'].includes(String(raw.marketDemand))
-      ? raw.marketDemand as CropRecommendation['marketDemand'] : 'Medium',
-    waterRequirement: ['Low', 'Medium', 'High'].includes(String(raw.waterRequirement))
-      ? raw.waterRequirement as CropRecommendation['waterRequirement'] : 'Medium',
+    marketDemand: ['High', 'Medium', 'Low'].includes(String(raw.marketDemand)) ? raw.marketDemand as CropRecommendation['marketDemand'] : 'Medium',
+    waterRequirement: ['Low', 'Medium', 'High'].includes(String(raw.waterRequirement)) ? raw.waterRequirement as CropRecommendation['waterRequirement'] : 'Medium',
     growingDuration: String(raw.growingDuration ?? 'Not specified'),
-    riskLevel: ['Low', 'Medium', 'High'].includes(String(raw.riskLevel))
-      ? raw.riskLevel as CropRecommendation['riskLevel'] : 'Medium',
+    riskLevel: ['Low', 'Medium', 'High'].includes(String(raw.riskLevel)) ? raw.riskLevel as CropRecommendation['riskLevel'] : 'Medium',
     reason: String(raw.reason ?? 'Recommendation generated from the supplied farm conditions.'),
     color: COLORS[crop],
     benefits: normalizeList(raw.benefits),
@@ -93,9 +67,7 @@ function normalizeRecommendation(
     fertilizer: String(raw.fertilizer ?? 'Follow soil-test and local agronomy guidance.'),
     irrigation: String(raw.irrigation ?? 'Follow crop-stage water requirements.'),
     harvestTime: String(raw.harvestTime ?? 'Not specified'),
-    marketPrice: hasVerifiedMarket
-      ? `₹${Math.round(min)}–${Math.round(max)} / quintal`
-      : 'Unavailable — no verified market record',
+    marketPrice: hasVerifiedMarket ? `₹${Math.round(min)}–${Math.round(max)} / quintal` : 'Unavailable — no verified market record',
   };
 }
 
@@ -130,7 +102,6 @@ Truth rules:
 - Set confidence as suitability confidence, not certainty.
 - Do not claim guaranteed profit or guaranteed yield.
 - Keep the recommendation actionable and farmer-friendly.
-- Only use crops from the allowed list above. Do not suggest any other crop names.
 
 JSON schema:
 {
@@ -164,10 +135,9 @@ JSON schema:
   }
 
   const unique = new Set<string>();
-  const recommendations = (parsed.recommendations as Record<string, unknown>[])
-    .map((item) => normalizeRecommendation(item, verifiedMarket))
-    .filter((item): item is CropRecommendation => {
-      if (!item) return false;
+  const recommendations = parsed.recommendations
+    .map((item) => normalizeRecommendation(item as Record<string, unknown>, verifiedMarket))
+    .filter((item) => {
       if (unique.has(item.crop)) return false;
       unique.add(item.crop);
       return true;
@@ -175,8 +145,6 @@ JSON schema:
     .slice(0, 5)
     .map((item, index) => ({ ...item, best: index === 0 }));
 
-  if (recommendations.length < 3) {
-    throw new Error('AI recommendation returned too few valid crops. Please try again.');
-  }
+  if (recommendations.length < 3) throw new Error('AI recommendation returned too few valid crops. Please try again.');
   return recommendations;
 }

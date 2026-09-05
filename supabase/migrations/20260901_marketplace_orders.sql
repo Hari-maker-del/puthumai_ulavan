@@ -45,7 +45,7 @@ alter table public.marketplace_listings enable row level security;
 alter table public.marketplace_orders enable row level security;
 
 drop policy if exists marketplace_listings_public_read on public.marketplace_listings;
-create policy marketplace_listings_public_read on public.marketplace_listings for select to authenticated using (available_quantity > 0 or seller_id = auth.uid());
+create policy marketplace_listings_public_read on public.marketplace_listings for select to anon, authenticated using (available_quantity > 0 or seller_id = auth.uid());
 
 drop policy if exists marketplace_listings_owner_insert on public.marketplace_listings;
 create policy marketplace_listings_owner_insert on public.marketplace_listings for insert to authenticated with check (seller_id = auth.uid());

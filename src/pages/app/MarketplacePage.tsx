@@ -50,7 +50,7 @@ export default function MarketplacePage() {
     } catch (err) { setError(err instanceof Error ? err.message : 'Marketplace data could not be loaded.'); }
     finally { setLoading(false); }
   }, [user]);
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => { void refresh(); const timer = window.setInterval(() => void refresh(), 60_000); return () => window.clearInterval(timer); }, [refresh]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

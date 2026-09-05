@@ -36,7 +36,6 @@ export default function YieldPredictionPage() {
 
   // Treat malformed/partial backend responses as empty data instead of
   // allowing a missing fields/trend property to crash the whole route.
-  // Stabilise derived arrays so downstream useMemo deps don't re-run on every render.
   const fields = useMemo(() => (Array.isArray(data?.fields) ? data.fields : []), [data]);
   const trend = useMemo(() => (Array.isArray(data?.trend) ? data.trend : []), [data]);
 

@@ -7,6 +7,7 @@ import GlassCard from '@/components/ui/GlassCard';
 import Button from '@/components/ui/Button';
 import { fetchWeather, type WeatherData } from '@/services/weatherService';
 import { useToast } from '@/components/ui/Toast';
+import WorldWeatherMap from '@/components/weather/WorldWeatherMap';
 
 const tooltipStyle = { borderRadius: 12, border: 'none', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', fontSize: 12 };
 
@@ -164,6 +165,9 @@ export default function WeatherPage() {
         </GlassCard>
       )}
 
+
+
+      <WorldWeatherMap />
 
       {data && !loading && (
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">

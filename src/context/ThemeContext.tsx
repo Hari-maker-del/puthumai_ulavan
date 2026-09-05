@@ -1,4 +1,4 @@
-/* eslint-disable react-refresh/only-export-components -- ThemeContext intentionally exports both provider and hook */
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 const THEME_STORAGE_KEY = 'puthumai_uzhavan_dark_mode';
@@ -60,10 +60,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
-// useTheme is exported from './useTheme' to keep this file fast-refresh compatible.
-function useTheme() {
+export function useTheme() {
   const context = useContext(ThemeContext);
   if (!context) throw new Error('useTheme must be used inside ThemeProvider');
   return context;
 }
-export { useTheme };

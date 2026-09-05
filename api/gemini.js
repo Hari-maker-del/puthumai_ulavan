@@ -28,10 +28,11 @@ Safety and truthfulness:
 
 Never claim that a recommendation is based on live data unless that live data is present in the supplied farm context.`;
 
-// In-memory rate-limit store (resets per serverless instance lifecycle).
 const rateWindowMs = 60_000;
 const rateLimit = 20;
 const requestLog = new Map();
+
+class ConfigurationError extends Error {}
 
 function json(res, body, status = 200) {
   res.status(status).setHeader('Content-Type', 'application/json');
@@ -41,9 +42,7 @@ function json(res, body, status = 200) {
 
 function clientKey(req, userId) {
   const forwarded = req.headers['x-forwarded-for'];
-  const ip = Array.isArray(forwarded)
-    ? forwarded[0]
-    : String(forwarded || req.socket?.remoteAddress || 'unknown').split(',')[0].trim();
+  const ip = Array.isArray(forwarded) ? forwarded[0] : String(forwarded || req.socket?.remoteAddress || 'unknown').split(',')[0].trim();
   return `${userId}:${ip}`;
 }
 
@@ -58,7 +57,6 @@ function allowed(req, userId) {
   }
   recent.push(now);
   requestLog.set(key, recent);
-  // Prune stale entries periodically to avoid unbounded growth.
   if (requestLog.size > 2000) {
     for (const [k, timestamps] of requestLog) {
       if (!timestamps.some(ts => now - ts < rateWindowMs)) requestLog.delete(k);
@@ -73,9 +71,7 @@ function bearer(req) {
 }
 
 async function authenticate(req) {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    throw new Error('Supabase server authentication is not configured.');
-  }
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) throw new ConfigurationError('Supabase server authentication is not configured.');
   const token = bearer(req);
   if (!token) throw new Error('Authentication required.');
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -87,18 +83,10 @@ async function authenticate(req) {
   return data.user.id;
 }
 
-/**
- * Build the system instruction string.
- * Returns a string — never pass this function itself as the value.
- */
-function buildSystemInstruction(context, language) {
+function systemInstruction(context, language) {
   let value = SYSTEM_INSTRUCTION_BASE;
-  if (context && String(context).trim()) {
-    value += `\n\nFARMER CONTEXT:\n${String(context).trim()}`;
-  }
-  if (language && language !== 'en') {
-    value += `\n\nIMPORTANT: Respond primarily in ${String(language)}.`;
-  }
+  if (context && String(context).trim()) value += `\n\nFARMER CONTEXT:\n${String(context).trim()}`;
+  if (language && language !== 'en') value += `\n\nIMPORTANT: Respond primarily in ${String(language)}.`;
   return value;
 }
 
@@ -106,31 +94,19 @@ function normalizeHistory(history) {
   if (!Array.isArray(history)) return [];
   return history.slice(-30).flatMap(item => {
     if (!item || (item.role !== 'user' && item.role !== 'model') || !item.text) return [];
-    return [{ role: item.role, parts: [{ text: String(item.text).slice(0, 12_000) }] }];
+    return [{ role: item.role, parts: [{ text: String(item.text).slice(0, 12000) }] }];
   });
 }
 
-function extractText(response) {
-  // response.text is a getter on GenerateContentResponse — access it safely.
-  try {
-    const t = response?.text;
-    return typeof t === 'string' && t.trim() ? t : '(No response from Gemini)';
-  } catch {
-    return '(No response from Gemini)';
-  }
+function extractMessage(response) {
+  return response?.text || '(No response from Gemini)';
 }
 
 function normalizeError(error) {
   const msg = error instanceof Error ? error.message : String(error || 'Unknown error');
-  if (/401|api.?key|unauthor/i.test(msg)) {
-    return 'The AI service is not configured correctly. Please contact the administrator.';
-  }
-  if (/429|quota|resource.?exhaust/i.test(msg)) {
-    return 'The AI service is busy right now. Please try again in a moment.';
-  }
-  if (/503|unavailable|high demand|temporarily/i.test(msg)) {
-    return 'The AI service is temporarily unavailable. Your farm data is safe. Please try again in a moment.';
-  }
+  if (/401|api.?key|unauthor/i.test(msg)) return 'The AI service is not configured correctly. Please contact the administrator.';
+  if (/429|quota|resource.?exhaust/i.test(msg)) return 'The AI service is busy right now. Please try again in a moment.';
+  if (/503|unavailable|high demand|temporarily/i.test(msg)) return 'The AI service is temporarily unavailable. Your farm data is safe. Please try again in a moment.';
   return 'The AI service could not complete this request. Please try again.';
 }
 
@@ -140,17 +116,8 @@ export default async function handler(req, res) {
   let userId;
   try {
     userId = await authenticate(req);
-  } catch (error) {
-    return json(res, { error: error instanceof Error ? error.message : 'Authentication required.' }, 401);
-  }
-
-  try {
-    if (!allowed(req, userId)) {
-      return json(res, { error: 'Too many AI requests. Please wait a minute and try again.' }, 429);
-    }
-    if (!GEMINI_API_KEY) {
-      return json(res, { error: 'The AI service is not configured on the server. Set GEMINI_API_KEY in Vercel environment variables.' }, 503);
-    }
+    if (!allowed(req, userId)) return json(res, { error: 'Too many AI requests. Please wait a minute and try again.' }, 429);
+    if (!GEMINI_API_KEY) return json(res, { error: 'The AI service is not configured on the server.' }, 503);
 
     const body = req.body || {};
     const mode = body.mode === 'image' ? 'image' : 'chat';
@@ -159,49 +126,34 @@ export default async function handler(req, res) {
     if (prompt.length > 20_000) return json(res, { error: 'Prompt is too large.' }, 413);
 
     const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-
-    // Build the instruction STRING — previously this was accidentally passed as a
-    // function reference ({ systemInstruction } shorthand) which silently sent
-    // the function object to the API instead of the text, breaking all AI responses.
-    const systemInstruction = buildSystemInstruction(
-      body.farmerMemoryContext,
-      body.preferredLanguage,
-    );
+    const instruction = systemInstruction(body.farmerMemoryContext, body.preferredLanguage);
 
     if (mode === 'image') {
       const imageDataUri = String(body.imageDataUri || '');
       const match = imageDataUri.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
-      if (!match) return json(res, { error: 'Invalid image format. Expected a data URI.' }, 400);
-      if (match[2].length > 8_000_000) return json(res, { error: 'Image is too large. Please use an image under 6 MB.' }, 400);
-
-      const imagePart = createPartFromBase64(
-        match[2],
-        match[1],
-        PartMediaResolutionLevel.MEDIA_RESOLUTION_MEDIUM,
-      );
-
+      if (!match || match[2].length > 8_000_000) return json(res, { error: 'Invalid or oversized image.' }, 400);
+      const imagePart = createPartFromBase64(match[2], match[1], PartMediaResolutionLevel.MEDIA_RESOLUTION_MEDIUM);
       const response = await ai.models.generateContent({
         model: MODEL,
-        config: { systemInstruction, temperature: 0.2 },
+        config: { systemInstruction: instruction, temperature: 0.2 },
         contents: [{ role: 'user', parts: [{ text: prompt }, imagePart] }],
       });
-
-      return json(res, { text: extractText(response) });
+      return json(res, { text: extractMessage(response) });
     }
 
-    // Chat mode
     const history = normalizeHistory(body.history);
     const chat = ai.chats.create({
       model: MODEL,
-      config: { systemInstruction },   // ← string value, not the function
+      config: { systemInstruction: instruction },
       history,
     });
-
     const response = await chat.sendMessage({ message: prompt });
-    return json(res, { text: extractText(response) });
-
+    return json(res, { text: extractMessage(response) });
   } catch (error) {
-    console.error('[gemini proxy] Unhandled error:', error);
-    return json(res, { error: normalizeError(error) }, 500);
+    if (error instanceof ConfigurationError) {
+      return json(res, { error: 'AI authentication is not configured on the server.' }, 503);
+    }
+    const status = error instanceof Error && /Authentication required/.test(error.message) ? 401 : 500;
+    return json(res, { error: status === 401 ? 'Authentication required.' : normalizeError(error) }, status);
   }
 }

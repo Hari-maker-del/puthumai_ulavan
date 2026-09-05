@@ -1,4 +1,3 @@
-import { useAuth } from '@/context/AuthContext';
 import { CalendarDays, MapPin } from 'lucide-react';
 import { useFarms } from '@/hooks/useFarms';
 import { useAuth } from '@/context/AuthContext';
@@ -8,7 +7,7 @@ import { supabase } from '@/lib/supabase';
 
 export default function WelcomeCard() {
   const { profile, user } = useAuth();
-  useFarms(user?.id); // subscribes to realtime farm updates
+  useFarms(user?.id); // subscribe to realtime farm updates
   const [fieldCount, setFieldCount] = useState(0);
   const [alertCount, setAlertCount] = useState(0);
 

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfe8ff"/><stop offset="0.65" stop-color="#eaf8ff"/><stop offset="1" stop-color="#ffffff"/></linearGradient>
+    <linearGradient id="hill" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8ed0a6"/><stop offset="1" stop-color="#4d9e69"/></linearGradient>
+    <linearGradient id="field" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#72bf62"/><stop offset="1" stop-color="#2f8248"/></linearGradient>
+    <filter id="soft" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="7"/></filter>
+  </defs>
+  <rect width="1200" height="420" fill="url(#sky)"/>
+  <g opacity="0.7" filter="url(#soft)">
+    <ellipse cx="210" cy="90" rx="105" ry="28" fill="#fff"/>
+    <ellipse cx="340" cy="70" rx="90" ry="24" fill="#fff"/>
+    <ellipse cx="930" cy="95" rx="120" ry="28" fill="#fff"/>
+  </g>
+  <path d="M0 240 C130 150 250 145 355 215 C455 120 570 135 675 215 C770 130 895 135 1005 215 C1100 150 1160 165 1200 205 L1200 420 L0 420 Z" fill="#a7d9be"/>
+  <path d="M0 272 C140 195 250 205 365 262 C500 178 620 185 730 262 C825 190 950 192 1060 260 C1120 220 1160 225 1200 250 L1200 420 L0 420 Z" fill="url(#hill)"/>
+  <path d="M0 320 C160 278 300 286 430 330 C560 275 700 282 850 332 C980 284 1100 292 1200 326 L1200 420 L0 420 Z" fill="url(#field)"/>
+  <g opacity="0.32" stroke="#e7f7d8" stroke-width="4" fill="none">
+    <path d="M60 420 C180 335 300 335 430 420"/><path d="M240 420 C350 345 470 345 590 420"/><path d="M440 420 C560 340 690 345 810 420"/><path d="M650 420 C770 345 890 348 1030 420"/><path d="M850 420 C950 355 1080 352 1170 420"/>
+  </g>
+  <g opacity="0.55" fill="#f8fff0">
+    <circle cx="180" cy="232" r="5"/><circle cx="215" cy="220" r="4"/><circle cx="1020" cy="235" r="5"/><circle cx="1065" cy="225" r="4"/>
+  </g>
+</svg>

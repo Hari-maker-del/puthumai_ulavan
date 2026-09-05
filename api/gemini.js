@@ -1,4 +1,5 @@
 const MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 const SYSTEM_INSTRUCTION_BASE = `You are Uzhavan AI, a friendly and knowledgeable agricultural assistant for Indian farmers, specialised in Tamil Nadu farming.
@@ -32,21 +33,24 @@ function json(res, body, status = 200) {
   res.status(status);
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Cache-Control', 'no-store');
+
   return res.end(JSON.stringify(body));
 }
 
 function getClientIp(req) {
   const forwarded = req.headers['x-forwarded-for'];
 
-  return Array.isArray(forwarded)
-    ? forwarded[0]
-    : String(
-        forwarded ||
-          req.socket?.remoteAddress ||
-          'unknown'
-      )
-        .split(',')[0]
-        .trim();
+  if (Array.isArray(forwarded)) {
+    return forwarded[0];
+  }
+
+  return String(
+    forwarded ||
+      req.socket?.remoteAddress ||
+      'unknown'
+  )
+    .split(',')[0]
+    .trim();
 }
 
 function allowed(req) {
@@ -56,7 +60,8 @@ function allowed(req) {
   const previous = requestLog.get(key) || [];
 
   const recent = previous.filter(
-    (timestamp) => now - timestamp < rateWindowMs
+    (timestamp) =>
+      now - timestamp < rateWindowMs
   );
 
   if (recent.length >= rateLimit) {
@@ -71,30 +76,45 @@ function allowed(req) {
 }
 
 function hasBearerToken(req) {
-  const authorization = req.headers.authorization || '';
+  const authorization =
+    req.headers.authorization || '';
 
   if (!authorization.startsWith('Bearer ')) {
     return false;
   }
 
-  const token = authorization.slice(7).trim();
+  const token = authorization
+    .slice(7)
+    .trim();
 
   return token.length > 0;
 }
 
-function buildSystemInstruction(context, language) {
-  let instruction = SYSTEM_INSTRUCTION_BASE;
+function buildSystemInstruction(
+  context,
+  language
+) {
+  let instruction =
+    SYSTEM_INSTRUCTION_BASE;
 
-  if (context && String(context).trim()) {
-    instruction += `\n\nFARMER CONTEXT:\n${String(
-      context
-    ).trim()}`;
+  if (
+    context &&
+    String(context).trim()
+  ) {
+    instruction += `
+
+FARMER CONTEXT:
+${String(context).trim()}`;
   }
 
-  if (language && language !== 'en') {
-    instruction += `\n\nIMPORTANT: Respond primarily in ${String(
-      language
-    )}.`;
+  if (
+    language &&
+    language !== 'en'
+  ) {
+    instruction += `
+
+IMPORTANT:
+Respond primarily in ${String(language)}.`;
   }
 
   return instruction;
@@ -122,10 +142,9 @@ function normalizeHistory(history) {
           role: item.role,
           parts: [
             {
-              text: String(item.text).slice(
-                0,
-                12000
-              ),
+              text: String(
+                item.text
+              ).slice(0, 12000),
             },
           ],
         },
@@ -134,9 +153,13 @@ function normalizeHistory(history) {
 }
 
 function extractGeminiText(data) {
-  const candidates = data?.candidates;
+  const candidates =
+    data?.candidates;
 
-  if (!Array.isArray(candidates) || candidates.length === 0) {
+  if (
+    !Array.isArray(candidates) ||
+    candidates.length === 0
+  ) {
     return '';
   }
 
@@ -144,13 +167,20 @@ function extractGeminiText(data) {
     candidates[0]?.content?.parts || [];
 
   return parts
-    .filter((part) => part && typeof part.text === 'string')
+    .filter(
+      (part) =>
+        part &&
+        typeof part.text === 'string'
+    )
     .map((part) => part.text)
     .join('')
     .trim();
 }
 
-async function callGemini(contents, systemInstruction) {
+async function callGemini(
+  contents,
+  systemInstruction
+) {
   if (!GEMINI_API_KEY) {
     throw new Error(
       'GEMINI_API_KEY is missing on the server.'
@@ -158,9 +188,11 @@ async function callGemini(contents, systemInstruction) {
   }
 
   const url =
-    `https://generativelanguage.googleapis.com/v1beta/models/` +
-    `${encodeURIComponent(MODEL)}:generateContent` +
-    `?key=${encodeURIComponent(GEMINI_API_KEY)}`;
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+      MODEL
+    )}:generateContent?key=${encodeURIComponent(
+      GEMINI_API_KEY
+    )}`;
 
   const payload = {
     systemInstruction: {
@@ -170,21 +202,31 @@ async function callGemini(contents, systemInstruction) {
         },
       ],
     },
+
     contents,
+
     generationConfig: {
       temperature: 0.2,
+      maxOutputTokens: 2048,
     },
   };
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
-  });
+  const response = await fetch(
+    url,
+    {
+      method: 'POST',
 
-  const data = await response.json();
+      headers: {
+        'Content-Type':
+          'application/json',
+      },
+
+      body: JSON.stringify(payload),
+    }
+  );
+
+  const data =
+    await response.json();
 
   if (!response.ok) {
     console.error(
@@ -193,16 +235,28 @@ async function callGemini(contents, systemInstruction) {
       JSON.stringify(data)
     );
 
-    const apiMessage =
+    const message =
       data?.error?.message ||
       `Gemini request failed with status ${response.status}`;
 
-    throw new Error(apiMessage);
+    const error =
+      new Error(message);
+
+    error.status =
+      response.status;
+
+    throw error;
   }
 
-  const text = extractGeminiText(data);
+  const text =
+    extractGeminiText(data);
 
   if (!text) {
+    console.error(
+      'Gemini returned empty response:',
+      JSON.stringify(data)
+    );
+
     throw new Error(
       'Gemini returned an empty response.'
     );
@@ -215,7 +269,9 @@ function normalizeError(error) {
   const message =
     error instanceof Error
       ? error.message
-      : String(error || 'Unknown error');
+      : String(
+          error || 'Unknown error'
+        );
 
   console.error(
     'Gemini API error:',
@@ -223,7 +279,7 @@ function normalizeError(error) {
   );
 
   if (
-    /API key not valid|api key|invalid.*key/i.test(
+    /api key|api_key|invalid.*key|key not valid/i.test(
       message
     )
   ) {
@@ -231,7 +287,7 @@ function normalizeError(error) {
   }
 
   if (
-    /quota|resource exhausted|429/i.test(
+    /quota|resource exhausted|rate limit|429/i.test(
       message
     )
   ) {
@@ -247,7 +303,9 @@ function normalizeError(error) {
   }
 
   if (
-    /not found|404|model/i.test(message)
+    /not found|404|model/i.test(
+      message
+    )
   ) {
     return `The Gemini model "${MODEL}" is unavailable. Check GEMINI_MODEL in Vercel.`;
   }
@@ -260,15 +318,47 @@ function normalizeError(error) {
     return 'Gemini is temporarily unavailable. Please try again.';
   }
 
-  return 'The AI service could not complete this request. Please try again.';
+  return message;
 }
 
-export default async function handler(req, res) {
+function getImageData(
+  imageDataUri
+) {
+  const value =
+    String(imageDataUri || '');
+
+  const match =
+    value.match(
+      /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/
+    );
+
+  if (!match) {
+    return null;
+  }
+
+  if (
+    !match[2] ||
+    match[2].length > 8_000_000
+  ) {
+    return null;
+  }
+
+  return {
+    mimeType: match[1],
+    data: match[2],
+  };
+}
+
+export default async function handler(
+  req,
+  res
+) {
   if (req.method !== 'POST') {
     return json(
       res,
       {
-        error: 'Method not allowed.',
+        error:
+          'Method not allowed.',
       },
       405
     );
@@ -276,29 +366,35 @@ export default async function handler(req, res) {
 
   try {
     /*
-     * The frontend already sends the Supabase
+     * The frontend sends a Supabase
      * access token.
      *
-     * We require the Bearer token but do not perform
-     * server-side Supabase JWT validation here because
-     * that was causing the production 401.
+     * We require the token to exist,
+     * but do not call Supabase getUser()
+     * here because that was the source
+     * of the production 401 problem.
      */
     if (!hasBearerToken(req)) {
       return json(
         res,
         {
-          error: 'Authentication required.',
+          error:
+            'Authentication required.',
         },
         401
       );
     }
 
     if (!GEMINI_API_KEY) {
+      console.error(
+        'GEMINI_API_KEY is missing.'
+      );
+
       return json(
         res,
         {
           error:
-            'GEMINI_API_KEY is missing on the server.',
+            'Gemini API key is not configured on the server.',
         },
         503
       );
@@ -315,27 +411,31 @@ export default async function handler(req, res) {
       );
     }
 
-    const body = req.body || {};
+    const body =
+      req.body || {};
 
-    const prompt = String(
-      body.prompt || ''
-    ).trim();
+    const prompt =
+      String(
+        body.prompt || ''
+      ).trim();
 
     if (!prompt) {
       return json(
         res,
         {
-          error: 'A prompt is required.',
+          error:
+            'A prompt is required.',
         },
         400
       );
     }
 
-    if (prompt.length > 20000) {
+    if (prompt.length > 20_000) {
       return json(
         res,
         {
-          error: 'Prompt is too large.',
+          error:
+            'Prompt is too large.',
         },
         413
       );
@@ -347,63 +447,52 @@ export default async function handler(req, res) {
         body.preferredLanguage
       );
 
-    const history = normalizeHistory(
-      body.history
-    );
-
     /*
-     * IMAGE / CROP ANALYSIS
+     * IMAGE MODE
      */
     if (body.mode === 'image') {
-      const imageDataUri = String(
-        body.imageDataUri || ''
-      );
+      const image =
+        getImageData(
+          body.imageDataUri
+        );
 
-      const match = imageDataUri.match(
-        /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/
-      );
-
-      if (!match) {
+      if (!image) {
         return json(
           res,
           {
-            error: 'Invalid image data.',
+            error:
+              'Invalid or oversized image.',
           },
           400
-        );
-      }
-
-      if (match[2].length > 8000000) {
-        return json(
-          res,
-          {
-            error: 'Image is too large.',
-          },
-          413
         );
       }
 
       const contents = [
         {
           role: 'user',
+
           parts: [
             {
               text: prompt,
             },
+
             {
               inlineData: {
-                mimeType: match[1],
-                data: match[2],
+                mimeType:
+                  image.mimeType,
+                data:
+                  image.data,
               },
             },
           ],
         },
       ];
 
-      const text = await callGemini(
-        contents,
-        instruction
-      );
+      const text =
+        await callGemini(
+          contents,
+          instruction
+        );
 
       return json(
         res,
@@ -415,12 +504,19 @@ export default async function handler(req, res) {
     }
 
     /*
-     * NORMAL CHAT
+     * NORMAL CHAT MODE
      */
+    const history =
+      normalizeHistory(
+        body.history
+      );
+
     const contents = [
       ...history,
+
       {
         role: 'user',
+
         parts: [
           {
             text: prompt,
@@ -429,10 +525,11 @@ export default async function handler(req, res) {
       },
     ];
 
-    const text = await callGemini(
-      contents,
-      instruction
-    );
+    const text =
+      await callGemini(
+        contents,
+        instruction
+      );
 
     return json(
       res,
@@ -442,12 +539,27 @@ export default async function handler(req, res) {
       200
     );
   } catch (error) {
+    console.error(
+      'Gemini handler error:',
+      error
+    );
+
+    const status =
+      Number.isInteger(
+        error?.status
+      ) &&
+      error.status >= 400 &&
+      error.status < 600
+        ? error.status
+        : 500;
+
     return json(
       res,
       {
-        error: normalizeError(error),
+        error:
+          normalizeError(error),
       },
-      500
+      status
     );
   }
 }

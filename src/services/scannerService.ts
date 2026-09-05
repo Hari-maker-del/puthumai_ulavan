@@ -75,7 +75,7 @@ function buildScanPrompt(crop: string, field: string) {
 function isCropScansTableUnavailable(error: unknown): boolean {
   const candidate = error as { code?: string; message?: string; details?: string } | null;
   const text = `${candidate?.code ?? ''} ${candidate?.message ?? ''} ${candidate?.details ?? ''}`.toLowerCase();
-  return candidate?.code === 'PGRST205' || candidate?.code === '42P01' || text.includes('crop_scans') && (text.includes('schema cache') || text.includes('does not exist') || text.includes('not found'));
+  return candidate?.code === 'PGRST205' || candidate?.code === '42P01' || (text.includes('crop_scans') && (text.includes('schema cache') || text.includes('does not exist') || text.includes('not found')));
 }
 
 function localHistoryKey(userId: string): string {
@@ -93,6 +93,14 @@ function readLocalHistory(userId: string): CropScanHistoryRow[] {
   }
 }
 
+function clearLocalHistory(userId: string) {
+  try {
+    localStorage.removeItem(localHistoryKey(userId));
+  } catch {
+    // Ignore storage errors.
+  }
+}
+
 function writeLocalHistory(userId: string, scan: ScanResult): CropScanHistoryRow {
   const row: CropScanHistoryRow = {
     ...scan,
@@ -107,6 +115,34 @@ function writeLocalHistory(userId: string, scan: ScanResult): CropScanHistoryRow
     // Keep the scan result usable even when browser storage is unavailable.
   }
   return row;
+}
+
+function mapDbRow(row: Record<string, unknown>): CropScanHistoryRow {
+  return {
+    id: String(row.id ?? ''),
+    user_id: String(row.user_id ?? ''),
+    crop: String(row.crop ?? 'Unknown'),
+    field: String(row.field ?? 'Field'),
+    date: String(row.date ?? new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })),
+    disease: row.disease === null ? null : String(row.disease ?? 'None'),
+    confidence: Number(row.confidence ?? 0),
+    severity: normalizeSeverity(row.severity ?? 'None'),
+    treatment: String(row.treatment ?? 'No recommendation available.'),
+    status: String(row.status ?? 'Healthy') as ScanResult['status'],
+    created_at: row.created_at ? String(row.created_at) : undefined,
+  };
+}
+
+function mergeHistory(dbRows: CropScanHistoryRow[], localRows: CropScanHistoryRow[]): CropScanHistoryRow[] {
+  const seen = new Set<string>();
+  const merged: CropScanHistoryRow[] = [];
+  for (const row of [...dbRows, ...localRows]) {
+    const key = row.id || `${row.crop}|${row.field}|${row.date}|${row.disease}|${row.confidence}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(row);
+  }
+  return merged.sort((a, b) => String(b.created_at ?? '').localeCompare(String(a.created_at ?? ''))).slice(0, 8);
 }
 
 export async function scanCrop(payload: ScannerRequest): Promise<ScannerResponse> {
@@ -131,11 +167,7 @@ export async function saveCropScanHistory(userId: string, scan: ScanResult): Pro
     status: scan.status,
     date: scan.date,
   });
-
   if (!error) return;
-
-  // A missing Supabase table must not prevent the AI scanner from working.
-  // Keep the result locally until the database migration is applied.
   if (isCropScansTableUnavailable(error)) {
     writeLocalHistory(userId, scan);
     return;
@@ -149,22 +181,37 @@ export async function getCropScanHistory(userId: string): Promise<CropScanHistor
     .select('*')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
-    .limit(8);
+    .limit(50);
 
   if (!error) {
-    return (data ?? []).map((row) => ({
-      id: String((row as Partial<CropScanHistoryRow> & Record<string, unknown>).id ?? ''),
-      user_id: String((row as Partial<CropScanHistoryRow> & Record<string, unknown>).user_id ?? ''),
-      crop: String((row as Record<string, unknown>).crop ?? 'Unknown'),
-      field: String((row as Record<string, unknown>).field ?? 'Field'),
-      date: String((row as Record<string, unknown>).date ?? new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })),
-      disease: (row as Record<string, unknown>).disease === null ? null : String((row as Record<string, unknown>).disease ?? 'None'),
-      confidence: Number((row as Record<string, unknown>).confidence ?? 0),
-      severity: normalizeSeverity((row as Record<string, unknown>).severity ?? 'None'),
-      treatment: String((row as Record<string, unknown>).treatment ?? 'No recommendation available.'),
-      status: String((row as Record<string, unknown>).status ?? 'Healthy') as ScanResult['status'],
-      created_at: (row as Record<string, unknown>).created_at ? String((row as Record<string, unknown>).created_at) : undefined,
-    }));
+    const dbRows = (data ?? []).map((row) => mapDbRow(row as Record<string, unknown>));
+    const localRows = readLocalHistory(userId);
+
+    if (localRows.length > 0) {
+      const migrated: CropScanHistoryRow[] = [];
+      for (const local of localRows) {
+        const { data: inserted, error: insertError } = await supabase
+          .from('crop_scans')
+          .insert({
+            user_id: userId,
+            crop: local.crop,
+            field: local.field,
+            disease: local.disease,
+            confidence: local.confidence,
+            severity: local.severity,
+            treatment: local.treatment,
+            status: local.status,
+            date: local.date,
+            created_at: local.created_at ?? new Date().toISOString(),
+          })
+          .select('*')
+          .single();
+        if (!insertError && inserted) migrated.push(mapDbRow(inserted as Record<string, unknown>));
+      }
+      if (migrated.length === localRows.length) clearLocalHistory(userId);
+      return mergeHistory(dbRows, migrated.length ? migrated : localRows);
+    }
+    return mergeHistory(dbRows, []);
   }
 
   if (isCropScansTableUnavailable(error)) return readLocalHistory(userId);

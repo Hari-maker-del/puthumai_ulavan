@@ -12,6 +12,12 @@ function parseJsonFromGemini(responseText: string): string {
   return objectMatch[0];
 }
 
+function clampConfidence(value: unknown): number {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 0;
+  return Math.round(Math.min(100, Math.max(0, numeric)));
+}
+
 function normalizeSeverity(value: unknown): ScanResult['severity'] {
   const severity = String(value ?? '').trim().toLowerCase();
   if (severity === 'high') return 'High';
@@ -28,15 +34,15 @@ function normalizeStatus(disease: string | null, severity: ScanResult['severity'
 function parseGeminiScanResponse(responseText: string, crop: string, field: string): ScannerResponse {
   const parsed = JSON.parse(parseJsonFromGemini(responseText)) as Record<string, unknown>;
   const disease = parsed.disease === null ? null : String(parsed.disease ?? '').trim() || null;
-  const diseaseConfidence = Number(parsed.disease_confidence ?? parsed.diseaseConfidence ?? 0);
+  const diseaseConfidence = clampConfidence(parsed.disease_confidence ?? parsed.diseaseConfidence);
   const nutrientDeficiency = String(parsed.nutrient_deficiency ?? parsed.nutrientDeficiency ?? 'None').trim();
-  const nutrientConfidence = Number(parsed.nutrient_confidence ?? parsed.nutrientConfidence ?? 0);
+  const nutrientConfidence = clampConfidence(parsed.nutrient_confidence ?? parsed.nutrientConfidence);
   const waterStress = String(parsed.water_stress ?? parsed.waterStress ?? 'None').trim();
-  const waterConfidence = Number(parsed.water_confidence ?? parsed.waterConfidence ?? 0);
+  const waterConfidence = clampConfidence(parsed.water_confidence ?? parsed.waterConfidence);
   const pestRisk = String(parsed.pest_risk ?? parsed.pestRisk ?? 'None').trim();
-  const pestConfidence = Number(parsed.pest_confidence ?? parsed.pestConfidence ?? 0);
+  const pestConfidence = clampConfidence(parsed.pest_confidence ?? parsed.pestConfidence);
   const recommendation = String(parsed.recommendation ?? parsed.treatment ?? 'Review the field and consult an agronomist.').trim();
-  const overallConfidence = Number(parsed.overall_confidence ?? parsed.overallConfidence ?? parsed.confidence ?? 0);
+  const overallConfidence = clampConfidence(parsed.overall_confidence ?? parsed.overallConfidence ?? parsed.confidence);
   const severity = normalizeSeverity(parsed.severity ?? (disease ? 'Moderate' : 'None'));
   const status = normalizeStatus(disease, severity);
 
@@ -46,30 +52,30 @@ function parseGeminiScanResponse(responseText: string, crop: string, field: stri
       field,
       date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
       disease,
-      confidence: Math.round(Math.min(100, Math.max(0, overallConfidence || diseaseConfidence || 0))),
+      confidence: overallConfidence || diseaseConfidence,
       severity,
       treatment: recommendation,
       status,
     },
     analysis: {
       disease,
-      diseaseConfidence: Math.round(Math.min(100, Math.max(0, diseaseConfidence || overallConfidence || 0))),
+      diseaseConfidence,
       nutrientDeficiency,
-      nutrientConfidence: Math.round(Math.min(100, Math.max(0, nutrientConfidence))),
+      nutrientConfidence,
       waterStress: ['None', 'Low', 'Moderate', 'High'].includes(waterStress) ? (waterStress as ScanResult['severity']) : 'None',
-      waterConfidence: Math.round(Math.min(100, Math.max(0, waterConfidence))),
+      waterConfidence,
       pestRisk: ['None', 'Low', 'Moderate', 'High'].includes(pestRisk) ? (pestRisk as ScanResult['severity']) : 'None',
-      pestConfidence: Math.round(Math.min(100, Math.max(0, pestConfidence))),
+      pestConfidence,
       recommendation,
-      overallConfidence: Math.round(Math.min(100, Math.max(0, overallConfidence || diseaseConfidence || 0))),
+      overallConfidence: overallConfidence || diseaseConfidence,
     },
   };
 }
 
 function buildScanPrompt(crop: string, field: string) {
-  return `Analyze the attached leaf image from a ${crop} field named "${field}". Provide only valid JSON with exactly these keys:\n` +
+  return `Analyze the attached leaf/crop image from the farmer's ${crop} crop in field "${field}". The image may be unclear or may not contain enough evidence for a reliable diagnosis. Do not invent a disease, pest, deficiency, confidence, or treatment. When evidence is insufficient, set disease to null, severity to "None", confidence values to 0 or a genuinely low value, and recommend a visual re-check or agricultural expert review. Provide only valid JSON with exactly these keys:\n` +
     `{"disease": string | null, "disease_confidence": number, "nutrient_deficiency": string, "nutrient_confidence": number, "water_stress": "None" | "Low" | "Moderate" | "High", "water_confidence": number, "pest_risk": "None" | "Low" | "Moderate" | "High", "pest_confidence": number, "recommendation": string, "overall_confidence": number, "severity": "None" | "Low" | "Moderate" | "High"}\n` +
-    `If there is no disease, set "disease" to null and "severity" to "None". Do not include any extra text outside the JSON object.`;
+    `Use "None" only when the image provides reasonable evidence that no issue is visible. Do not include any extra text outside the JSON object.`;
 }
 
 function isCropScansTableUnavailable(error: unknown): boolean {
@@ -125,7 +131,7 @@ function mapDbRow(row: Record<string, unknown>): CropScanHistoryRow {
     field: String(row.field ?? 'Field'),
     date: String(row.date ?? new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })),
     disease: row.disease === null ? null : String(row.disease ?? 'None'),
-    confidence: Number(row.confidence ?? 0),
+    confidence: clampConfidence(row.confidence),
     severity: normalizeSeverity(row.severity ?? 'None'),
     treatment: String(row.treatment ?? 'No recommendation available.'),
     status: String(row.status ?? 'Healthy') as ScanResult['status'],
@@ -142,7 +148,7 @@ function mergeHistory(dbRows: CropScanHistoryRow[], localRows: CropScanHistoryRo
     seen.add(key);
     merged.push(row);
   }
-  return merged.sort((a, b) => String(b.created_at ?? '').localeCompare(String(a.created_at ?? ''))).slice(0, 8);
+  return merged.sort((a, b) => String(b.created_at ?? '').localeCompare(String(a.created_at ?? ''))).slice(0, 50);
 }
 
 export async function scanCrop(payload: ScannerRequest): Promise<ScannerResponse> {

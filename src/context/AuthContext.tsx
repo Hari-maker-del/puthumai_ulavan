@@ -15,6 +15,31 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+const SESSION_BACKUP_KEY = 'puthumai-uzhavan:auth-session-backup';
+
+function saveSessionBackup(nextSession: Session | null): void {
+  try {
+    if (nextSession) {
+      localStorage.setItem(SESSION_BACKUP_KEY, JSON.stringify(nextSession));
+    } else {
+      localStorage.removeItem(SESSION_BACKUP_KEY);
+    }
+  } catch {
+    // Session backup is best-effort; Supabase remains the primary session store.
+  }
+}
+
+function readSessionBackup(): Session | null {
+  try {
+    const raw = localStorage.getItem(SESSION_BACKUP_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Session;
+    if (!parsed?.access_token || !parsed?.refresh_token || !parsed?.user?.id) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -37,8 +62,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Restore the persisted Supabase session before protected routes are evaluated.
-  // The listener only mirrors auth state; profile loading is handled separately so
-  // an auth callback can never keep the route guard in an indeterminate state.
+  // A small app-level backup protects against browser/Supabase storage restoration
+  // failures after a tab is closed and reopened. Supabase remains the source of truth.
   useEffect(() => {
     let mounted = true;
 
@@ -56,8 +81,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (error) {
           console.error('Failed to restore session:', error.message);
           setSession(null);
-        } else {
+        } else if (data.session) {
           setSession(data.session);
+          saveSessionBackup(data.session);
+        } else {
+          // Supabase returned no session. Recover the last valid session snapshot
+          // and immediately hand it back to Supabase so normal refresh continues.
+          const backup = readSessionBackup();
+          if (backup) {
+            const { data: restored, error: restoreError } = await supabase.auth.setSession({
+              access_token: backup.access_token,
+              refresh_token: backup.refresh_token,
+            });
+
+            if (restored.session && !restoreError) {
+              setSession(restored.session);
+              saveSessionBackup(restored.session);
+            } else {
+              saveSessionBackup(null);
+              setSession(null);
+            }
+          } else {
+            setSession(null);
+          }
         }
       } catch (error) {
         console.error('Failed to restore session:', error);
@@ -75,6 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!mounted) return;
 
       setSession(newSession);
+      saveSessionBackup(newSession);
 
       if (!newSession) {
         setProfile(null);
@@ -87,8 +134,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Keep profile state synchronized with the authenticated user without blocking
-  // the auth route guard. Clear the previous user's profile immediately on switch.
   useEffect(() => {
     let cancelled = false;
     const userId = session?.user?.id;
@@ -125,17 +170,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [session?.user?.id]);
 
   const signOut = useCallback(async () => {
-    // Only this explicit action clears the local session. Session restoration
-    // never calls signOut(), so reopening the app does not force a new login.
     const { error } = await supabase.auth.signOut({ scope: 'local' });
 
     if (error) throw error;
 
     setProfile(null);
     setSession(null);
-
-    // Remove data belonging to the previous session so another account on the
-    // same browser/device cannot inherit cached state or queued mutations.
+    saveSessionBackup(null);
     clearOfflineUserData();
     clearToken();
   }, []);

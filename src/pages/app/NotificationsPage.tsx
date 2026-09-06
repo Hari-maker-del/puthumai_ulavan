@@ -1,36 +1,26 @@
-import React, { useEffect, useState } from 'react';
-import { Bell, CheckCheck, Trash2 } from 'lucide-react';
-import { FarmNotification, loadNotifications, saveNotifications } from '../../services/notificationService';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Bell, Check, CheckCheck, Cloud, Droplets, Info, Landmark, Sprout, Trash2, Wallet, Wheat, AlertTriangle } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import GlassCard from '@/components/ui/GlassCard';
+import PageHeader from '@/components/ui/PageHeader';
+import { useToast } from '@/components/ui/Toast';
+import { clearNotifications, loadNotifications, markAllNotificationsRead, markNotificationRead, type FarmNotification } from '@/services/notificationService';
 
-export default function NotificationsPage() {
-  const [items, setItems] = useState<FarmNotification[]>([]);
-  useEffect(() => setItems(loadNotifications()), []);
+const META: Record<string,{label:string;icon:typeof Bell}> = { weather:{label:'Weather',icon:Cloud}, crop:{label:'Crop',icon:Sprout}, irrigation:{label:'Irrigation',icon:Droplets}, market:{label:'Market',icon:Wheat}, expense:{label:'Expense',icon:Wallet}, scheme:{label:'Scheme',icon:Landmark}, health:{label:'Health',icon:AlertTriangle}, task:{label:'Task',icon:Check}, reminder:{label:'Reminder',icon:Bell}, ai:{label:'AI',icon:Bell} };
+function formatDate(value:string){const d=new Date(value);return Number.isNaN(d.getTime())?'Date unavailable':d.toLocaleString(undefined,{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'});}
 
-  const markAll = () => {
-    const next = items.map(item => ({ ...item, read: true }));
-    setItems(next); saveNotifications(next);
-  };
-  const clear = () => { setItems([]); saveNotifications([]); };
-
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div><p className="text-sm font-medium text-emerald-600">Farm updates</p><h1 className="text-3xl font-bold">Notifications</h1></div>
-        <div className="flex gap-2">
-          <button onClick={markAll} className="rounded-xl border px-4 py-2 text-sm"><CheckCheck className="mr-2 inline h-4 w-4" />Mark all read</button>
-          <button onClick={clear} className="rounded-xl border px-4 py-2 text-sm"><Trash2 className="mr-2 inline h-4 w-4" />Clear</button>
-        </div>
-      </div>
-      <div className="rounded-2xl border bg-white p-5 shadow-sm">
-        {items.length === 0 ? (
-          <div className="py-12 text-center text-slate-500"><Bell className="mx-auto mb-3 h-8 w-8" />No notifications yet.</div>
-        ) : items.map(item => (
-          <div key={item.id} className={`border-b py-4 last:border-b-0 ${item.read ? '' : 'bg-emerald-50/40'}`}>
-            <p className="font-semibold">{item.title}</p>
-            <p className="text-sm text-slate-600">{item.message}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+export default function NotificationsPage(){
+ const {user}=useAuth(); const {toast}=useToast(); const [items,setItems]=useState<FarmNotification[]>([]); const [loading,setLoading]=useState(true); const [unreadOnly,setUnreadOnly]=useState(false); const [type,setType]=useState('all'); const [clearing,setClearing]=useState(false);
+ useEffect(()=>{let active=true;if(!user?.id){setLoading(false);return;}setLoading(true);void loadNotifications(user.id).then(data=>{if(active){setItems(data);setLoading(false);}});return()=>{active=false;};},[user?.id]);
+ const unread=useMemo(()=>items.filter(x=>!x.read).length,[items]); const types=useMemo(()=>['all',...Array.from(new Set(items.map(x=>x.type)))],[items]);
+ const visible=useMemo(()=>items.filter(x=>(!unreadOnly||!x.read)&&(type==='all'||x.type===type)),[items,unreadOnly,type]);
+ const markRead=async(id:string)=>{if(!user?.id)return;await markNotificationRead(id,user.id);setItems(v=>v.map(x=>x.id===id?{...x,read:true}:x));};
+ const markAll=async()=>{if(!user?.id||!unread)return;await markAllNotificationsRead(user.id);setItems(v=>v.map(x=>({...x,read:true})));toast('All notifications marked as read','success');};
+ const clear=async()=>{if(!user?.id||!items.length)return;setClearing(true);await clearNotifications(user.id);setItems([]);setClearing(false);toast('Notifications cleared','success');};
+ if(!user)return <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center text-amber-800">Please log in to view notifications.</div>;
+ return <div className="space-y-6 pb-8"><PageHeader icon={Bell} title="Notifications" subtitle="One inbox for your weather, crop, irrigation, market, scheme, health, task and AI updates."/>
+ <section className="rounded-3xl border border-brand-100 bg-gradient-to-br from-brand-50 via-white to-amber-50 p-5 sm:p-7"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><div className="inline-flex items-center gap-2 rounded-full border border-brand-100 bg-white px-3 py-1 text-xs font-bold text-brand-700"><Bell size={13}/> Farmer notification center</div><h2 className="mt-3 font-display text-2xl font-bold text-ink-900">{unread?`${unread} notification${unread===1?'':'s'} need attention`:'You are all caught up'}</h2><p className="mt-2 text-sm text-ink-600">Only notifications belonging to your authenticated account are shown.</p></div><div className="rounded-2xl bg-white px-5 py-4 text-center shadow-sm"><div className="text-2xl font-bold text-ink-900">{items.length}</div><div className="text-xs text-ink-500">Total</div></div></div></section>
+ <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"><div className="flex flex-wrap gap-2"><button onClick={()=>setUnreadOnly(false)} className={`rounded-xl px-4 py-2 text-sm font-semibold ${!unreadOnly?'bg-brand-600 text-white':'border border-gray-200 bg-white'}`}>All ({items.length})</button><button onClick={()=>setUnreadOnly(true)} className={`rounded-xl px-4 py-2 text-sm font-semibold ${unreadOnly?'bg-brand-600 text-white':'border border-gray-200 bg-white'}`}>Unread ({unread})</button>{types.slice(1).map(t=>{const M=META[t]??META.ai;return <button key={t} onClick={()=>setType(t)} className={`rounded-xl border px-3 py-2 text-xs font-semibold ${type===t?'border-brand-300 bg-brand-50 text-brand-700':'border-gray-200 bg-white'}`}>{M.label}</button>})}</div><div className="flex gap-2">{unread>0&&<button onClick={()=>void markAll()} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-semibold"><CheckCheck size={15}/>Mark all read</button>}{items.length>0&&<button onClick={()=>void clear()} disabled={clearing} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-semibold"><Trash2 size={15}/>{clearing?'Clearing…':'Clear all'}</button>}</div></div>
+ {loading?<GlassCard padding="lg" className="py-14 text-center text-ink-500">Loading your notifications…</GlassCard>:visible.length===0?<GlassCard padding="lg" className="py-14 text-center"><Bell className="mx-auto mb-3 h-8 w-8 text-brand-500"/><h3 className="font-display text-lg font-bold">No notifications found</h3></GlassCard>:<div className="space-y-3">{visible.map(item=>{const M=META[item.type]??META.ai;const Icon=M.icon;return <article key={item.id} className={`rounded-2xl border p-4 sm:p-5 ${item.read?'border-gray-200 bg-white opacity-70':'border-brand-100 bg-white shadow-sm'}`}><div className="flex items-start gap-3"><div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700"><Icon size={20}/></div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="font-display font-bold text-ink-900">{item.title}</h3>{!item.read&&<span className="rounded-full bg-brand-100 px-2 py-0.5 text-[10px] font-bold text-brand-700">New</span>}</div>{item.message&&<p className="mt-2 text-sm leading-6 text-ink-600">{item.message}</p>}<div className="mt-2 text-[11px] text-ink-400">{formatDate(item.createdAt)}</div></div>{!item.read&&<button onClick={()=>void markRead(item.id)} aria-label="Mark as read" className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gray-50"><Check size={15}/></button>}</div></article>})}</div>}
+ <GlassCard padding="lg" className="border-brand-100 bg-brand-50/40"><div className="flex items-start gap-3"><Info size={19} className="mt-0.5 text-brand-600"/><p className="text-sm leading-6 text-ink-600">Notifications are connected to your farm alerts and are scoped to your authenticated account.</p></div></GlassCard></div>;
 }

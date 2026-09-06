@@ -43,13 +43,34 @@ function normalizeCommodity(crop?: string | null) {
   return map[value] ?? crop?.trim() ?? null;
 }
 
-function normalizeRow(row: Record<string, unknown>, source: string, index = 0): MarketPrice | null {
+function normalizeDate(value: unknown): string | null {
+  if (value === null || value === undefined || String(value).trim() === '') return null;
+  const raw = String(value).trim();
+  const iso = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (iso) return `${iso[1]}-${iso[2].padStart(2, '0')}-${iso[3].padStart(2, '0')}`;
+
+  const dmy = raw.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+  if (dmy) return `${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}`;
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString().slice(0, 10);
+}
+
+function normalizeRow(
+  row: Record<string, unknown>,
+  source: string,
+  index = 0,
+  verified = true,
+): MarketPrice | null {
   const crop = String(row.commodity ?? row.crop ?? '').trim();
   const price = Number(row.modal_price ?? row.price ?? 0);
   if (!crop || !Number.isFinite(price) || price <= 0) return null;
 
+  const priceDate = normalizeDate(row.arrival_date ?? row.price_date ?? row.created_at);
+
   return {
-    id: String(row.id ?? `${source}-${index}-${row.arrival_date ?? row.price_date ?? ''}-${row.market ?? ''}`),
+    id: String(row.id ?? `${source}-${index}-${priceDate ?? ''}-${row.market ?? ''}`),
     crop,
     market: row.market ? String(row.market).trim() : null,
     district: row.district ? String(row.district).trim() : null,
@@ -58,9 +79,9 @@ function normalizeRow(row: Record<string, unknown>, source: string, index = 0): 
     minPrice: Number(row.min_price ?? 0) || null,
     maxPrice: Number(row.max_price ?? 0) || null,
     unit: row.unit ? String(row.unit) : '₹/quintal',
-    price_date: row.arrival_date ? String(row.arrival_date) : row.price_date ? String(row.price_date) : null,
+    price_date: priceDate,
     source,
-    verified: true,
+    verified,
   };
 }
 
@@ -84,9 +105,11 @@ async function getGovernmentPrices(options: MarketIntelligenceFilter): Promise<M
 
   const payload = await response.json() as { records?: Record<string, unknown>[] };
   const rows = payload.records ?? [];
-  return rows.map((row, index) => normalizeRow(row, 'AGMARKNET / data.gov.in', index))
+  return rows
+    .map((row, index) => normalizeRow(row, 'AGMARKNET / data.gov.in', index, true))
     .filter((row): row is MarketPrice => row !== null)
-    .filter((row) => !options.market || row.market?.toLowerCase() === options.market.toLowerCase());
+    .filter((row) => !options.market || row.market?.toLowerCase() === options.market.toLowerCase())
+    .sort((a, b) => (b.price_date ?? '').localeCompare(a.price_date ?? ''));
 }
 
 async function getVerifiedSupabasePrices(options: MarketIntelligenceFilter): Promise<MarketPrice[]> {
@@ -107,7 +130,7 @@ async function getVerifiedSupabasePrices(options: MarketIntelligenceFilter): Pro
   if (error || !data) return [];
 
   return (data as Record<string, unknown>[])
-    .map((row, index) => normalizeRow(row, row.source ? String(row.source) : 'Verified Supabase record', index))
+    .map((row, index) => normalizeRow(row, row.source ? String(row.source) : 'Verified Supabase record', index, true))
     .filter((row): row is MarketPrice => row !== null);
 }
 
@@ -150,6 +173,7 @@ export async function getMarketPrices(
     .from('market_prices')
     .select('id,user_id,crop,market,district,state,price,unit,price_date,source,is_verified,created_at')
     .eq('user_id', userId)
+    .eq('is_verified', true)
     .order('price_date', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(100);
@@ -162,6 +186,6 @@ export async function getMarketPrices(
   if (error || !data) return [];
 
   return (data as Record<string, unknown>[])
-    .map((row, index) => normalizeRow(row, row.source ? String(row.source) : 'User-linked market record', index))
-    .filter((row): row is MarketPrice => row !== null && Boolean(row.verified));
+    .map((row, index) => normalizeRow(row, row.source ? String(row.source) : 'Verified user-linked market record', index, true))
+    .filter((row): row is MarketPrice => row !== null);
 }

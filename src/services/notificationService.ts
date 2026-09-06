@@ -32,9 +32,11 @@ export async function markAllNotificationsRead(userId: string): Promise<void> {
 }
 
 export async function clearNotifications(userId: string): Promise<void> {
-  const { error } = await supabase.from('farmer_alerts').delete().eq('user_id',userId);
+  // Preserve alert history and live weather records. Clearing the inbox means marking
+  // notifications read rather than destructively deleting the farmer_alerts rows.
+  const { error } = await supabase.from('farmer_alerts').update({is_read:true}).eq('user_id',userId).eq('is_read',false);
   if (!error) return;
-  saveNotifications([]);
+  const items = await loadNotifications(userId); saveNotifications(items.map(item => ({...item,read:true})));
 }
 
 export async function addNotification(notification: Omit<FarmNotification,'id'|'createdAt'|'read'>): Promise<FarmNotification> {

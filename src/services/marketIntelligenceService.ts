@@ -31,6 +31,7 @@ export interface MarketIntelligenceResult {
 }
 
 const DATA_GOV_URL = 'https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070';
+const GOVERNMENT_SOURCE = 'AGMARKNET / data.gov.in';
 
 function normalizeCommodity(crop?: string | null) {
   const value = (crop ?? '').trim().toLowerCase();
@@ -55,6 +56,22 @@ function normalizeDate(value: unknown): string | null {
   const parsed = new Date(raw);
   if (Number.isNaN(parsed.getTime())) return null;
   return parsed.toISOString().slice(0, 10);
+}
+
+function normalizeText(value?: string | null) {
+  return String(value ?? '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function sameDistrict(a?: string | null, b?: string | null) {
+  const left = normalizeText(a);
+  const right = normalizeText(b);
+  if (!left || !right) return false;
+  if (left === right) return true;
+  const aliases: Record<string, string> = {
+    tirupur: 'tiruppur',
+    tiruppur: 'tiruppur',
+  };
+  return (aliases[left] ?? left) === (aliases[right] ?? right);
 }
 
 function normalizeRow(
@@ -85,31 +102,61 @@ function normalizeRow(
   };
 }
 
-async function getGovernmentPrices(options: MarketIntelligenceFilter): Promise<MarketPrice[]> {
-  const key = String(import.meta.env.VITE_DATA_GOV_API_KEY ?? '').trim();
-  if (!key) return [];
-
+async function fetchGovernmentRows(
+  key: string,
+  options: MarketIntelligenceFilter,
+  includeDistrict: boolean,
+  includeState: boolean,
+): Promise<MarketPrice[]> {
   const params = new URLSearchParams({ 'api-key': key, format: 'json', offset: '0', limit: '100' });
-  if (options.state) params.set('filters[state.keyword]', options.state);
-  if (options.district) params.set('filters[district]', options.district);
+  if (includeState && options.state) params.set('filters[state.keyword]', options.state);
+  if (includeDistrict && options.district) params.set('filters[district]', options.district);
   const commodity = normalizeCommodity(options.crop);
   if (commodity) params.set('filters[commodity]', commodity);
 
   const response = await fetch(`${DATA_GOV_URL}?${params}`);
   if (!response.ok) {
     if (response.status === 401 || response.status === 403) {
-      throw new Error('Market service authentication failed. Check VITE_DATA_GOV_API_KEY.');
+      throw new Error('Market service authentication failed. Check VITE_DATA_GOV_API_KEY in Vercel.');
     }
     throw new Error(`Government market data request failed with status ${response.status}.`);
   }
 
   const payload = await response.json() as { records?: Record<string, unknown>[] };
-  const rows = payload.records ?? [];
-  return rows
-    .map((row, index) => normalizeRow(row, 'AGMARKNET / data.gov.in', index, true))
+  return (payload.records ?? [])
+    .map((row, index) => normalizeRow(row, GOVERNMENT_SOURCE, index, true))
     .filter((row): row is MarketPrice => row !== null)
     .filter((row) => !options.market || row.market?.toLowerCase() === options.market.toLowerCase())
     .sort((a, b) => (b.price_date ?? '').localeCompare(a.price_date ?? ''));
+}
+
+async function getGovernmentPrices(options: MarketIntelligenceFilter): Promise<{ prices: MarketPrice[]; broaderSearch: boolean }> {
+  const key = String(import.meta.env.VITE_DATA_GOV_API_KEY ?? '').trim();
+  if (!key) {
+    throw new Error('Government market data is not configured. Add VITE_DATA_GOV_API_KEY to the Vercel Production environment and redeploy.');
+  }
+
+  // First try the exact farmer-selected crop + state + district.
+  let prices = await fetchGovernmentRows(key, options, Boolean(options.district), Boolean(options.state));
+  if (prices.length) return { prices, broaderSearch: false };
+
+  // Government records sometimes use a different district spelling. Retry by state + crop,
+  // then keep only the requested district when an equivalent spelling is present.
+  if (options.district && options.state) {
+    const statePrices = await fetchGovernmentRows(key, options, false, true);
+    const districtMatches = statePrices.filter((row) => sameDistrict(row.district, options.district));
+    if (districtMatches.length) return { prices: districtMatches, broaderSearch: false };
+    if (statePrices.length) return { prices: statePrices, broaderSearch: true };
+  }
+
+  // Last fallback: crop-only government search. Returned rows retain their real market and
+  // district so the UI never presents them as local prices.
+  if (options.state) {
+    prices = await fetchGovernmentRows(key, options, false, false);
+    if (prices.length) return { prices, broaderSearch: true };
+  }
+
+  return { prices: [], broaderSearch: false };
 }
 
 async function getVerifiedSupabasePrices(options: MarketIntelligenceFilter): Promise<MarketPrice[]> {
@@ -140,11 +187,17 @@ export async function getMarketIntelligence(
 ): Promise<MarketIntelligenceResult> {
   try {
     const government = await getGovernmentPrices(filter);
-    if (government.length) {
-      return { prices: government, source: 'government', sourceLabel: 'AGMARKNET / Government of India' };
+    if (government.prices.length) {
+      return {
+        prices: government.prices,
+        source: 'government',
+        sourceLabel: government.broaderSearch
+          ? 'AGMARKNET / Government of India — broader crop/state results'
+          : 'AGMARKNET / Government of India',
+      };
     }
   } catch (error) {
-    if (String(error).includes('authentication failed')) throw error;
+    if (String(error).includes('authentication failed') || String(error).includes('not configured')) throw error;
   }
 
   const verified = await getVerifiedSupabasePrices(filter);
@@ -164,9 +217,9 @@ export async function getMarketPrices(
 ): Promise<MarketPrice[]> {
   try {
     const government = await getGovernmentPrices({ crop, district, state });
-    if (government.length) return government;
+    if (government.prices.length) return government.prices;
   } catch (error) {
-    if (String(error).includes('authentication failed')) throw error;
+    if (String(error).includes('authentication failed') || String(error).includes('not configured')) throw error;
   }
 
   let query = supabase

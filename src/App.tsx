@@ -34,8 +34,7 @@ const SeasonReportPage       = lazy(() => import('@/pages/app/SeasonReportPage')
 const SettingsPage           = lazy(() => import('@/pages/app/SettingsPage'));
 const AdminPanelPage         = lazy(() => import('@/pages/app/AdminPanelPage'));
 const GovSchemesPage         = lazy(() => import('@/pages/app/GovSchemesPage'));
-const MarketplacePage        = lazy(() => import('@/pages/app/MarketplacePage'));
-// v2.0 new pages
+const MarketplacePage        = lazy(() => import('@/pages/app/ProductMarketplacePage'));
 const FarmerMemoryPage       = lazy(() => import('@/pages/app/FarmerMemoryPage'));
 const FarmingAlertsPage      = lazy(() => import('@/pages/app/FarmingAlertsPage'));
 const MarketIntelligencePage  = lazy(() => import('@/pages/app/MarketIntelligencePage'));
@@ -73,7 +72,6 @@ export default function App() {
             <RecommendationProvider>
             <Suspense fallback={<PageLoader />}>
               <Routes>
-                {/* public */}
                 <Route path="/"                   element={<LandingPage />} />
                 <Route path="/login"              element={<LoginPage />} />
                 <Route path="/signup"             element={<RegisterPage />} />
@@ -84,8 +82,6 @@ export default function App() {
                 <Route path="/verify-email"        element={<VerifyEmailPage />} />
                 <Route path="/onboarding/role" element={<ProtectedRoute><OnboardingRolePage /></ProtectedRoute>} />
                 <Route path="/onboarding/farm" element={<ProtectedRoute><OnboardingFarmPage /></ProtectedRoute>} />
-
-                {/* protected dashboard — /dashboard/* and /app/* both work */}
                 <Route path="/dashboard" element={<DashboardLayout />}>
                   <Route index                    element={<DashboardHome />} />
                   <Route path="profile"           element={<ProfilePage />} />
@@ -102,7 +98,6 @@ export default function App() {
                   <Route path="admin"             element={<AdminPanelPage />} />
                   <Route path="schemes"           element={<GovSchemesPage />} />
                   <Route path="marketplace"       element={<MarketplacePage />} />
-                  {/* v2.0 routes */}
                   <Route path="farmer-memory"     element={<FarmerMemoryPage />} />
                   <Route path="alerts"            element={<FarmingAlertsPage />} />
                   <Route path="market-intelligence" element={<MarketIntelligencePage />} />
@@ -115,8 +110,6 @@ export default function App() {
                   <Route path="farm-outcomes" element={<FarmOutcomePage />} />
                   <Route path="farm-health" element={<FarmHealthPage />} />
                 </Route>
-
-                {/* /app/* redirects */}
                 <Route path="/app" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/app/farmer-memory" element={<Navigate to="/dashboard/farmer-memory" replace />} />
                 <Route path="/app/alerts"        element={<Navigate to="/dashboard/alerts" replace />} />

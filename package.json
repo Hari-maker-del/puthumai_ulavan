@@ -20,7 +20,7 @@
     "real-farmer:check": "node scripts/real-farmer-production-check.mjs",
     "production:complete": "node scripts/complete-production-audit.mjs",
     "check:responsive": "node scripts/errorfree-responsive-check.mjs",
-    "quality:final": "npm run farm:operations:audit && npm run real-data:audit && npm run next20:full-audit && npm run check:responsive && npm run lint:cleanup:audit && npm run typecheck && npm run lint && npm run build",
+    "quality:final": "npm run farm:operations:audit && npm run real-data:audit && npm run next20:full-audit && npm run check:responsive && npm run lint:cleanup:audit && npm run pages:audit && npm run seo:audit && npm run typecheck && npm run lint && npm run build",
     "real-data:audit": "node scripts/real-data-only-audit.mjs",
     "next20:full-audit": "node scripts/next20-full-audit.mjs",
     "lint:cleanup:audit": "node scripts/final-lint-cleanup-audit.mjs",
@@ -35,7 +35,8 @@
     "lint:strict": "eslint . --max-warnings 0",
     "production:release-gate": "npm run auth:check && npm run typecheck && npm run lint:strict && npm run build",
     "i18n:hardcoded-audit": "node scripts/i18n-hardcoded-audit.mjs",
-    "pages:audit": "node scripts/page-route-audit.mjs"
+    "pages:audit": "node scripts/page-route-audit.mjs",
+    "seo:audit": "node scripts/seo-audit.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",

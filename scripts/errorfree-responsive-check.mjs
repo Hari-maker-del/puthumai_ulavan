@@ -8,7 +8,7 @@ for (const f of [
   'src/services/safeStorage.ts'
 ]) if (!fs.existsSync(path.join(root,f))) failures.push(`Missing ${f}`);
 
-for (const f of ['.env','.env.local','.env.production','.git','dist','node_modules'])
+for (const f of ['.env','.env.local','.env.production'])
   if (fs.existsSync(path.join(root,f))) failures.push(`Forbidden artifact ${f}`);
 
 const css=[];

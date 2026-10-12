@@ -47,9 +47,7 @@ export default function CropRecommendationPage() {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<CropRecommendation[] | null>(null);
   const [search, setSearch] = useState('');
-  const [districtFilter, setDistrictFilter] = useState('All');
   const [seasonFilter, setSeasonFilter] = useState('All');
-  const [soilFilter] = useState('All');
   const [waterFilter, setWaterFilter] = useState('All');
   const [detailCrop, setDetailCrop] = useState<string | null>(null);
   const { profile } = useAuth();
@@ -108,7 +106,9 @@ export default function CropRecommendationPage() {
       return;
     }
     const numericFields = [form.soilPH, form.rainfall, form.temperature, form.humidity, form.landSize];
-    if (numericFields.some((value) => value === '' || !Number.isFinite(Number(value)))) {
+    const optionalNutrients = [form.nitrogen, form.phosphorus, form.potassium];
+    if (numericFields.some((value) => value === '' || !Number.isFinite(Number(value))) ||
+      optionalNutrients.some((value) => value !== '' && !Number.isFinite(Number(value)))) {
       toast('Enter valid numeric farm and weather values before generating a recommendation.', 'error');
       setLoading(false);
       return;
@@ -123,6 +123,10 @@ export default function CropRecommendationPage() {
         season: form.season,
         district: form.district,
         temperature: Number(form.temperature),
+        humidity: Number(form.humidity),
+        nitrogen: form.nitrogen === '' ? undefined : Number(form.nitrogen),
+        phosphorus: form.phosphorus === '' ? undefined : Number(form.phosphorus),
+        potassium: form.potassium === '' ? undefined : Number(form.potassium),
         farmArea: Number(form.landSize),
         previousCrop: form.previousCrop,
         waterAvailability: form.waterSource,
@@ -159,13 +163,11 @@ export default function CropRecommendationPage() {
     const query = search.trim().toLowerCase();
     return (results ?? []).filter((item) => {
       const matchesSearch = !query || item.crop.toLowerCase().includes(query) || item.reason.toLowerCase().includes(query);
-      const matchesDistrict = districtFilter === 'All' || item.crop === detailCrop || true;
       const matchesSeason = seasonFilter === 'All' || form.season === seasonFilter;
-      const matchesSoil = soilFilter === 'All' || form.soilType === soilFilter;
       const matchesWater = waterFilter === 'All' || item.waterRequirement === waterFilter;
-      return matchesSearch && matchesDistrict && matchesSeason && matchesSoil && matchesWater;
+      return matchesSearch && matchesSeason && matchesWater;
     });
-  }, [detailCrop, districtFilter, form.season, form.soilType, results, search, seasonFilter, soilFilter, waterFilter]);
+  }, [form.season, results, search, seasonFilter, waterFilter]);
 
   const best = filteredResults.find((r) => r.best) ?? filteredResults[0];
   const detail = filteredResults.find((item) => item.crop === detailCrop) ?? best;
@@ -213,12 +215,11 @@ export default function CropRecommendationPage() {
         </GlassCard>
       </form>
 
-      <div className="grid md:grid-cols-4 gap-3">
+      <div className="grid md:grid-cols-3 gap-3">
         <div className="relative">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-800/35" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search crop" className="w-full rounded-xl bg-brand-50 border border-brand-100 pl-9 pr-4 py-3 text-sm text-ink-900 outline-none" />
         </div>
-        <FormField label="District" name="districtFilter" variant="select" value={districtFilter} onChange={setDistrictFilter} options={['All', 'Thanjavur', 'Coimbatore', 'Madurai', 'Tirunelveli']} placeholder="All districts" />
         <FormField label="Season" name="seasonFilter" variant="select" value={seasonFilter} onChange={setSeasonFilter} options={['All', ...seasonOptions]} placeholder="All seasons" />
         <FormField label="Water" name="waterFilter" variant="select" value={waterFilter} onChange={setWaterFilter} options={['All', 'Low', 'Medium', 'High']} placeholder="All water" />
       </div>

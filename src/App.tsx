@@ -11,6 +11,7 @@ import OnboardingFarmPage from '@/pages/OnboardingFarmPage';
 import { I18nProvider } from '@/i18n/I18nContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import RouteSEO from '@/components/RouteSEO';
 
 const LandingPage            = lazy(() => import('@/pages/LandingPage'));
 const LoginPage              = lazy(() => import('@/pages/LoginPage'));
@@ -67,6 +68,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
+        <RouteSEO />
         <ThemeProvider>
         <AuthProvider>
           <I18nProvider>

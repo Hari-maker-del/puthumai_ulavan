@@ -1,5 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { Leaf, RefreshCw } from 'lucide-react';
+import { Home, Leaf, RefreshCw } from 'lucide-react';
 
 interface Props {
   children: ReactNode;
@@ -36,7 +36,7 @@ export default class ErrorBoundary extends Component<Props, State> {
             </div>
             <h1 className="mt-6 font-display font-bold text-2xl text-ink-900">Something went wrong</h1>
             <p className="mt-2 text-ink-600 leading-relaxed">
-              An unexpected error occurred. Try refreshing the page — your data is safe.
+              An unexpected error occurred. Refresh the page to try again. Any changes that were not saved may be lost, so check your farm records before repeating an action.
             </p>
             <button
               onClick={this.handleReload}
@@ -44,6 +44,12 @@ export default class ErrorBoundary extends Component<Props, State> {
             >
               <RefreshCw size={17} /> Refresh page
             </button>
+            <a
+              href="/"
+              className="mt-3 inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-white px-6 py-3 text-sm font-semibold text-emerald-800 hover:bg-emerald-50 transition-colors"
+            >
+              <Home size={17} /> Go to home
+            </a>
           </div>
         </div>
       );

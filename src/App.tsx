@@ -100,6 +100,35 @@ export default function App() {
                 <Route path="/unsubscribe" element={<ProfessionalPage />} />
                 <Route path="/unsupported-browser" element={<ProfessionalPage />} />
 
+
+                {/* Farmer education, data rights, and support pages */}
+                <Route path="/how-it-works" element={<ProfessionalPage />} />
+                <Route path="/for-farmers" element={<ProfessionalPage />} />
+                <Route path="/crop-calendar" element={<ProfessionalPage />} />
+                <Route path="/soil-health-guide" element={<ProfessionalPage />} />
+                <Route path="/water-management" element={<ProfessionalPage />} />
+                <Route path="/pest-management" element={<ProfessionalPage />} />
+                <Route path="/market-prices" element={<ProfessionalPage />} />
+                <Route path="/government-schemes" element={<ProfessionalPage />} />
+                <Route path="/farmer-resources" element={<ProfessionalPage />} />
+                <Route path="/community" element={<ProfessionalPage />} />
+                <Route path="/success-stories" element={<ProfessionalPage />} />
+                <Route path="/report-issue" element={<ProfessionalPage />} />
+                <Route path="/security" element={<ProfessionalPage />} />
+                <Route path="/data-export" element={<ProfessionalPage />} />
+                <Route path="/delete-account" element={<ProfessionalPage />} />
+                <Route path="/feedback" element={<ProfessionalPage />} />
+                <Route path="/how-we-use-data" element={<ProfessionalPage />} />
+                <Route path="/app-download" element={<ProfessionalPage />} />
+                <Route path="/service-guidelines" element={<ProfessionalPage />} />
+                <Route path="/accessibility-help" element={<ProfessionalPage />} />
+                <Route path="/data-correction" element={<ProfessionalPage />} />
+                <Route path="/weather-guidance" element={<ProfessionalPage />} />
+                <Route path="/expense-guidance" element={<ProfessionalPage />} />
+                <Route path="/yield-estimates" element={<ProfessionalPage />} />
+                <Route path="/crop-planning" element={<ProfessionalPage />} />
+                <Route path="/farm-records" element={<ProfessionalPage />} />
+
                 {/* Friendly error destinations */}
                 <Route path="/400" element={<ProfessionalPage />} />
                 <Route path="/401" element={<ProfessionalPage />} />

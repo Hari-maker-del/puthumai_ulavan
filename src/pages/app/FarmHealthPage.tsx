@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Activity, AlertTriangle, CheckCircle2, CloudRain, Database, Droplets, MapPinned, ShieldCheck, Sprout, WalletCards, Wind } from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle2, Database, Droplets, MapPinned, ShieldCheck, WalletCards, Wind } from 'lucide-react';
 import { useDashboard } from '@/hooks/useDashboard';
 import { calculateFarmHealth } from '@/services/farmHealthScoreService';
 import Skeleton from '@/components/ui/Skeleton';

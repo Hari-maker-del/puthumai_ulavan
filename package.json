@@ -34,7 +34,8 @@
     "production:verify": "npm run production:audit && npm run real-data:audit && npm run rls:static-audit && npm run dependency:review",
     "lint:strict": "eslint . --max-warnings 0",
     "production:release-gate": "npm run auth:check && npm run typecheck && npm run lint:strict && npm run build",
-    "i18n:hardcoded-audit": "node scripts/i18n-hardcoded-audit.mjs"
+    "i18n:hardcoded-audit": "node scripts/i18n-hardcoded-audit.mjs",
+    "pages:audit": "node scripts/page-route-audit.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",

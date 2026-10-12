@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://puthumai-ulavan.vercel.app/sitemap.xml

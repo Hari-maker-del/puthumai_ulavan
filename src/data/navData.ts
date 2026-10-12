@@ -2,6 +2,7 @@ export const sidebarNav = [
   { label: 'Dashboard',           icon: 'LayoutDashboard', path: '/dashboard' },
   { label: 'Farm Intelligence',   icon: 'Brain',      path: '/dashboard/farm-intelligence' },
   { label: 'Farm Health',          icon: 'Activity',    path: '/dashboard/farm-health' },
+  { label: 'Farm Outcomes',         icon: 'TrendingUp',  path: '/dashboard/farm-outcomes' },
   { label: 'My Farm',             icon: 'MapPinned',        path: '/dashboard/farm-profile' },
   { label: 'Farm Memory',         icon: 'Brain',            path: '/dashboard/farmer-memory' },
   { label: 'Smart Alerts',        icon: 'Bell',             path: '/dashboard/alerts' },

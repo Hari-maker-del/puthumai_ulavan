@@ -43,7 +43,12 @@ export async function recommendCrops(payload: CropRecommendRequest): Promise<Cro
     ),
   ]);
 
-  if (farmsResult.error) throw new Error(farmsResult.error.message);
+  // The form already carries the farmer's current inputs. Farm rows enrich
+  // the prompt but should not block recommendations if that optional lookup
+  // is unavailable (for example, due to a temporary database/RLS issue).
+  if (farmsResult.error) {
+    console.warn('Unable to load saved farms for crop recommendation context:', farmsResult.error.message);
+  }
 
   const recommendations = await generateAICropRecommendations(
     payload,

@@ -1,11 +1,12 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Wallet, TrendingUp } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
-import { expenseByCategory, expenses } from '@/data/dummyData';
-
-const total = expenses.reduce((s, e) => s + e.amount, 0);
+import { useDashboard } from '@/hooks/useDashboard';
 
 export default function ExpenseCard() {
+  const { data, loading, error } = useDashboard();
+  const total = data?.finance.totalExpenses ?? 0;
+  const expenseByCategory: { name: string; value: number; color: string }[] = [];
   return (
     <GlassCard padding="lg" className="h-full flex flex-col">
       <div className="flex items-center justify-between">
@@ -19,9 +20,9 @@ export default function ExpenseCard() {
       </div>
 
       <div className="mt-4 flex items-end gap-2">
-        <span className="font-display font-extrabold text-3xl text-ink-900">₹{total.toLocaleString('en-IN')}</span>
+        <span className="font-display font-extrabold text-3xl text-ink-900">{loading ? '—' : error ? 'Unavailable' : `₹${total.toLocaleString('en-IN')}`}</span>
         <span className="text-xs font-semibold text-error-600 mb-1 flex items-center gap-0.5">
-          <TrendingUp size={12} className="rotate-180" /> 6%
+          <TrendingUp size={12} className="rotate-180" /> Recorded
         </span>
       </div>
 

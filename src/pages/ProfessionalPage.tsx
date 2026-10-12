@@ -1,8 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
 import {
   ArrowLeft, ArrowRight, BookOpen, CheckCircle2, HelpCircle, Clock3,
-  CloudOff, FileText, Home, Leaf, Mail, RefreshCw, ShieldCheck,
-  AlertTriangle, Wifi, Wrench, XCircle,
+  CloudOff, FileText, Leaf, Mail, ShieldCheck,
+  AlertTriangle, Wifi, Wrench,
 } from 'lucide-react';
 
 type PageConfig = {

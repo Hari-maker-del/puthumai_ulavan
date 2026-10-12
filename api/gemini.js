@@ -97,7 +97,7 @@ function extractGeminiText(data) {
 async function requestModel(model, contents, systemInstruction, fastMode = false) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`;
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), fastMode ? 9_000 : 22_000);
+  const timeout = setTimeout(() => controller.abort(), fastMode ? 8_000 : 11_000);
 
   try {
     const response = await fetch(url, {
@@ -131,19 +131,21 @@ async function callGemini(contents, systemInstruction, fastMode = false) {
   const candidates = [primary];
   if (!fastMode && FALLBACK_MODEL && FALLBACK_MODEL !== primary) candidates.push(FALLBACK_MODEL);
 
+  // Vercel's configured function budget is 30 seconds. Try each model once
+  // with a bounded timeout rather than retrying a slow model past the request
+  // deadline. The fallback model still gets a chance to answer.
   let lastError = null;
   for (const model of candidates) {
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      try {
-        return await requestModel(model, contents, systemInstruction, fastMode);
-      } catch (error) {
-        lastError = error;
-        const status = Number(error?.status || 0);
-        const message = String(error?.message || '');
-        const transient = status === 429 || status === 500 || status === 502 || status === 503 || status === 504 || /overloaded|temporarily unavailable|resource exhausted/i.test(message);
-        if (!transient) break;
-        if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 1200));
-      }
+    try {
+      return await requestModel(model, contents, systemInstruction, fastMode);
+    } catch (error) {
+      lastError = error;
+      const status = Number(error?.status || 0);
+      const message = String(error?.message || '');
+      const transient = status === 429 || status === 500 || status === 502 || status === 503 || status === 504 || /overloaded|temporarily unavailable|resource exhausted/i.test(message);
+      // A transient primary-model failure is allowed to fall through to the
+      // configured fallback. Do not retry the same model within this request.
+      if (!transient) continue;
     }
   }
 

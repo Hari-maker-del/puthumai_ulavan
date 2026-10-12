@@ -18,7 +18,7 @@ export async function loadNotifications(userId?: string): Promise<FarmNotificati
   try { return JSON.parse(localStorage.getItem(KEY) || '[]') as FarmNotification[]; } catch { return []; }
 }
 
-export function saveNotifications(items: FarmNotification[]): void { try { localStorage.setItem(KEY, JSON.stringify(items)); } catch {} }
+export function saveNotifications(items: FarmNotification[]): void { try { localStorage.setItem(KEY, JSON.stringify(items)); } catch (error) { console.warn('Unable to persist notifications locally.', error); } }
 
 export async function markNotificationRead(id: string, userId?: string): Promise<void> {
   if (userId) { const { error } = await supabase.from('farmer_alerts').update({ is_read:true }).eq('id',id).eq('user_id',userId); if (!error) return; }

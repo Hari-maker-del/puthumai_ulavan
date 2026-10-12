@@ -139,7 +139,13 @@ export default function CropRecommendationPage() {
 
       const topCrop = ranked[0];
       if (topCrop && user?.id) {
-        await saveRecommendationHistory(user.id, payload, topCrop);
+        // Show the recommendation even if history persistence is temporarily
+        // unavailable. Saving history is secondary to returning the result.
+        try {
+          await saveRecommendationHistory(user.id, payload, topCrop);
+        } catch (historyError) {
+          console.warn('Recommendation generated but history could not be saved:', historyError);
+        }
         addRecommendation({
           id: `${Date.now()}`,
           user_id: user.id,

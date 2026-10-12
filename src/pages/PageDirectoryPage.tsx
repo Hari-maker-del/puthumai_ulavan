@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowUpRight, BookOpen, CircleHelp, Leaf, ShieldCheck, Sprout, Wrench } from 'lucide-react';
+import { ArrowUpRight, BookOpen, HelpCircle, Leaf, ShieldCheck, Sprout, Wrench } from 'lucide-react';
 
 type PageLink = { label: string; path: string; note?: string };
 type PageGroup = { title: string; description: string; icon: typeof Leaf; pages: PageLink[] };
@@ -164,7 +164,7 @@ export default function PageDirectoryPage() {
 
         <section className="mb-8 rounded-2xl border border-emerald-100 bg-white p-5 sm:p-6" aria-label="Directory coverage">
           <div className="flex items-start gap-3">
-            <CircleHelp size={22} className="mt-0.5 shrink-0 text-emerald-700" aria-hidden="true" />
+            <HelpCircle size={22} className="mt-0.5 shrink-0 text-emerald-700" aria-hidden="true" />
             <div>
               <h2 className="font-semibold">What this directory confirms</h2>
               <p className="mt-1 text-sm leading-6 text-slate-600">

@@ -1,9 +1,11 @@
 import { TrendingUp, IndianRupee } from 'lucide-react';
 import Card from '@/components/ui/GlassCard';
-import { profit } from '@/data/dummyData';
+import { useDashboard } from '@/hooks/useDashboard';
 
 export default function ProfitCard() {
-  const change = ((profit.thisMonth - profit.lastMonth) / profit.lastMonth) * 100;
+  const { data, loading, error } = useDashboard();
+  const profit = { thisMonth: data?.finance.expectedProfit ?? 0, lastMonth: (data?.finance.revenueLastMonth ?? 0) - (data?.finance.expensesLastMonth ?? 0), margin: data?.finance.profitMargin ?? 0, perAcre: data?.kpis.totalAcreage ? (data?.finance.expectedProfit ?? 0) / data.kpis.totalAcreage : 0 };
+  const change = profit.lastMonth ? ((profit.thisMonth - profit.lastMonth) / Math.abs(profit.lastMonth)) * 100 : 0;
   const sparkPoints = [40, 55, 48, 62, 70, 85];
   const max = Math.max(...sparkPoints);
   const path = sparkPoints
@@ -20,7 +22,7 @@ export default function ProfitCard() {
       </div>
 
       <div className="mt-4 flex items-end gap-2">
-        <span className="font-display font-bold text-3xl text-ink-900">₹{profit.thisMonth.toLocaleString('en-IN')}</span>
+        <span className="font-display font-bold text-3xl text-ink-900">{loading ? '—' : error ? 'Unavailable' : `₹${profit.thisMonth.toLocaleString('en-IN')}`}</span>
       </div>
 
       <div className="mt-1.5 flex items-center gap-2">
@@ -40,7 +42,7 @@ export default function ProfitCard() {
       <div className="mt-3 flex items-center justify-between text-xs">
         <div>
           <div className="text-ink-600">Margin</div>
-          <div className="font-bold text-ink-900">{profit.margin}%</div>
+          <div className="font-bold text-ink-900">{profit.margin.toFixed(1)}%</div>
         </div>
         <div className="text-right">
           <div className="text-ink-600">Per acre</div>

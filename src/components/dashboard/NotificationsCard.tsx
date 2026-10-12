@@ -12,7 +12,7 @@ const typeMeta: Record<string, { icon: typeof CloudRain; bg: string; fg: string 
 };
 
 export default function NotificationsCard() {
-  const { data, loading, error } = useDashboard();
+  const { data, loading } = useDashboard();
   const [dismissed, setDismissed] = useState<string[]>([]);
   const items = (data?.notifications ?? []).filter((item) => !dismissed.includes(item.id));
   const dismiss = (id: string) => setDismissed((prev) => [...prev, id]);

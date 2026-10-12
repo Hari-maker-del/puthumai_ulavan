@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   ArrowLeft, ArrowRight, BookOpen, CheckCircle2, HelpCircle, Clock3,
   CloudOff, FileText, Home, Leaf, Mail, RefreshCw, ShieldCheck,
-  TriangleAlert, Wifi, Wrench, XCircle,
+  AlertTriangle, Wifi, Wrench, XCircle,
 } from 'lucide-react';
 
 type PageConfig = {
@@ -180,14 +180,14 @@ const pages: Record<string, PageConfig> = {
     description: 'For better security and compatibility, use a current version of Chrome, Edge, Firefox or Safari.',
     icon: Wrench, actions: [{ label: 'Return home', to: '/', primary: true }],
   },
-  '/400': { title: 'Invalid request', description: 'The request could not be understood. Check the information and try again.', icon: TriangleAlert, actions: [{ label: 'Return home', to: '/', primary: true }] },
+  '/400': { title: 'Invalid request', description: 'The request could not be understood. Check the information and try again.', icon: AlertTriangle, actions: [{ label: 'Return home', to: '/', primary: true }] },
   '/401': { title: 'Sign in required', description: 'Sign in to access this part of Puthumai Ulavan.', icon: ShieldCheck, actions: [{ label: 'Sign in', to: '/login', primary: true }] },
   '/403': { title: 'Access denied', description: 'You do not have permission to view this page. If you think you should have access, contact support.', icon: ShieldCheck, actions: [{ label: 'Go to dashboard', to: '/dashboard', primary: true }, { label: 'Contact support', to: '/contact' }] },
   '/404': { title: 'Page not found', description: 'We couldn’t find the page you were looking for. It may have moved or the address may be incorrect.', icon: FileText, actions: [{ label: 'Go home', to: '/', primary: true }, { label: 'Open help center', to: '/help' }] },
   '/408': { title: 'Request timed out', description: 'The request took too long. Check your connection and try again.', icon: Clock3, actions: [{ label: 'Retry', to: '/', primary: true }] },
   '/429': { title: 'Too many requests', description: 'Please wait a little before trying again.', icon: Clock3, actions: [{ label: 'Go home', to: '/', primary: true }] },
-  '/500': { title: 'Something went wrong', description: 'An unexpected server error occurred. Try again later. Your last action may not have completed, so check its status before repeating it.', icon: TriangleAlert, actions: [{ label: 'Try again', to: '/', primary: true }, { label: 'System status', to: '/system-status' }] },
-  '/502': { title: 'Service connection problem', description: 'A service needed to complete this request did not respond correctly. Please try again later.', icon: TriangleAlert, actions: [{ label: 'Try again', to: '/', primary: true }] },
+  '/500': { title: 'Something went wrong', description: 'An unexpected server error occurred. Try again later. Your last action may not have completed, so check its status before repeating it.', icon: AlertTriangle, actions: [{ label: 'Try again', to: '/', primary: true }, { label: 'System status', to: '/system-status' }] },
+  '/502': { title: 'Service connection problem', description: 'A service needed to complete this request did not respond correctly. Please try again later.', icon: AlertTriangle, actions: [{ label: 'Try again', to: '/', primary: true }] },
   '/503': { title: 'Service temporarily unavailable', description: 'The service is temporarily unavailable. Please try again shortly.', icon: Wrench, actions: [{ label: 'System status', to: '/system-status', primary: true }, { label: 'Go home', to: '/' }] },
   '/504': { title: 'Service timed out', description: 'A service took too long to respond. Check your connection and try again later.', icon: Clock3, actions: [{ label: 'Try again', to: '/', primary: true }] },
 
@@ -240,7 +240,7 @@ const pages: Record<string, PageConfig> = {
   '/pest-management': {
     eyebrow: 'CROP PROTECTION', title: 'Crop pest and disease management',
     description: 'Use careful field scouting and verified agricultural guidance to identify crop problems before choosing a treatment.',
-    icon: TriangleAlert, actions: [{ label: 'Open crop health', to: '/dashboard/crop-health', primary: true }],
+    icon: AlertTriangle, actions: [{ label: 'Open crop health', to: '/dashboard/crop-health', primary: true }],
     sections: [
       { title: 'Inspect and document', body: 'Record affected crop, growth stage, symptoms, spread pattern and the date first noticed. Clear photos can help an expert review the issue.' },
       { title: 'Use safe, verified guidance', body: 'Do not apply pesticides based only on an unverified image or AI answer. Follow the product label and local agricultural advice.' },
@@ -295,7 +295,7 @@ const pages: Record<string, PageConfig> = {
   '/report-issue': {
     eyebrow: 'TECHNICAL SUPPORT', title: 'Report a technical issue',
     description: 'Help the team investigate a problem by noting what happened, which page you were using and whether your connection was stable.',
-    icon: TriangleAlert, actions: [{ label: 'Contact support', to: '/contact', primary: true }, { label: 'Visit help center', to: '/help' }],
+    icon: AlertTriangle, actions: [{ label: 'Contact support', to: '/contact', primary: true }, { label: 'Visit help center', to: '/help' }],
     sections: [
       { title: 'Include useful details', body: 'Share the page URL, approximate time, device/browser and the exact error message.' },
       { title: 'Keep credentials private', body: 'Never include passwords, OTPs, access tokens, payment PINs or private keys in an issue report.' },

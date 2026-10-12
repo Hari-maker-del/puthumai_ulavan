@@ -4,8 +4,6 @@ import path from 'node:path';
 const root = process.cwd();
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const failures = [];
-const robotsPath = path.join(root, 'public/robots.txt');
-const sitemapPath = path.join(root, 'public/sitemap.xml');
 
 for (const file of ['src/components/RouteSEO.tsx', 'public/robots.txt', 'public/sitemap.xml']) {
   if (!fs.existsSync(path.join(root, file))) failures.push(`Missing required SEO file: ${file}`);

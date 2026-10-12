@@ -1,18 +1,20 @@
 import { Link } from 'react-router-dom';
 import { BadgeCheck, MapPin, CalendarRange, Sprout, Star, ArrowRight } from 'lucide-react';
 import Card from '@/components/ui/GlassCard';
-import { farmerProfile } from '@/data/dummyData';
+import { useDashboard } from '@/hooks/useDashboard';
 
 export default function FarmerProfileCard() {
+  const { data, loading, error } = useDashboard();
+  const farmerProfile = data?.farmerProfile ?? { initials: 'F', name: 'Farmer profile', verified: false, plan: 'Farm workspace', location: 'Add farm location', activeFields: 0, seasonsCompleted: 0, rating: 0 };
   return (
     <Card padding="lg" className="h-full">
       <div className="flex items-center gap-4">
         <div className="h-14 w-14 rounded-full bg-brand-600 grid place-items-center text-white font-display font-bold text-xl flex-shrink-0">
-          {farmerProfile.initials}
+          {loading ? '…' : farmerProfile.initials}
         </div>
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <h3 className="font-display font-bold text-lg text-ink-900 truncate">{farmerProfile.name}</h3>
+            <h3 className="font-display font-bold text-lg text-ink-900 truncate">{loading ? 'Loading profile…' : farmerProfile.name}</h3>
             {farmerProfile.verified && <BadgeCheck size={16} className="text-brand-600 flex-shrink-0" />}
           </div>
           <div className="text-sm text-brand-700 font-semibold">{farmerProfile.plan}</div>

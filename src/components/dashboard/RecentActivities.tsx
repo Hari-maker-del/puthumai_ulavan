@@ -1,5 +1,5 @@
 import { CloudRain, Leaf, Wallet, Bot } from 'lucide-react';
-import { notifications } from '@/data/dummyData';
+import { useDashboard } from '@/hooks/useDashboard';
 
 const typeMeta: Record<string, { icon: React.ReactNode; dot: string }> = {
   weather: { icon: <CloudRain size={14} className="text-sky-600" />,   dot: 'bg-sky-400' },
@@ -9,6 +9,8 @@ const typeMeta: Record<string, { icon: React.ReactNode; dot: string }> = {
 };
 
 export default function RecentActivities() {
+  const { data, loading, error } = useDashboard();
+  const notifications = data?.notifications ?? [];
   return (
     <div className="bg-white rounded-xl shadow-card p-5 h-full">
       <div className="flex items-center justify-between mb-4">
@@ -20,6 +22,8 @@ export default function RecentActivities() {
         </button>
       </div>
 
+      {loading && <p className="text-sm text-ink-500">Loading recorded activity…</p>}
+      {error && <p className="text-sm text-amber-700">Activity could not be loaded.</p>}
       <ul className="space-y-0">
         {notifications.map((n, i) => {
           const meta = typeMeta[n.type] ?? typeMeta.ai;

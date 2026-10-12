@@ -1,6 +1,6 @@
 import { Check, Circle, Clock } from 'lucide-react';
 import Card from '@/components/ui/GlassCard';
-import { tasks } from '@/data/dummyData';
+import { useDashboard } from '@/hooks/useDashboard';
 
 const priorityStyle: Record<string, string> = {
   high: 'bg-red-50 text-error-600 border-red-100',
@@ -9,13 +9,15 @@ const priorityStyle: Record<string, string> = {
 };
 
 export default function TasksCard() {
+  const { data, loading, error } = useDashboard();
+  const tasks = data?.tasks ?? [];
   const remaining = tasks.filter((t) => !t.done).length;
   return (
     <Card padding="lg" className="h-full flex flex-col">
       <div className="flex items-center justify-between">
         <div>
           <div className="text-xs font-bold uppercase tracking-widest text-brand-600">Today's Tasks</div>
-          <div className="text-sm text-ink-600 mt-0.5">{remaining} remaining · {tasks.length} total</div>
+          <div className="text-sm text-ink-600 mt-0.5">{loading ? 'Loading tasks…' : `${remaining} remaining · ${tasks.length} total`}</div>
         </div>
         <button className="text-xs font-bold text-brand-600 hover:text-brand-700">+ Add</button>
       </div>

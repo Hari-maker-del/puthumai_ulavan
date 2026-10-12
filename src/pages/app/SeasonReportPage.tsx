@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarRange, IndianRupee, Download, Printer, Droplets, Sprout, Wheat, AlertCircle, Loader2 } from 'lucide-react';
+import { CalendarRange, IndianRupee, Download, Printer, Droplets, Sprout, Wheat, AlertCircle } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import GlassCard from '@/components/ui/GlassCard';
 import StatTile from '@/components/ui/StatTile';

@@ -9,7 +9,7 @@ const priorityStyle: Record<string, string> = {
 };
 
 export default function TasksCard() {
-  const { data, loading, error } = useDashboard();
+  const { data, loading } = useDashboard();
   const tasks = data?.tasks ?? [];
   const remaining = tasks.filter((t) => !t.done).length;
   return (

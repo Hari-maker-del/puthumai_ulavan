@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, CloudRain, Leaf, Wallet, Bot, X } from 'lucide-react';
 import { useState } from 'react';
 import Card from '@/components/ui/GlassCard';
-import { notifications } from '@/data/dummyData';
+import { useDashboard } from '@/hooks/useDashboard';
 
 const typeMeta: Record<string, { icon: typeof CloudRain; bg: string; fg: string }> = {
   weather: { icon: CloudRain, bg: 'bg-accent-100', fg: 'text-accent-700' },
@@ -12,9 +12,10 @@ const typeMeta: Record<string, { icon: typeof CloudRain; bg: string; fg: string 
 };
 
 export default function NotificationsCard() {
-  const [items, setItems] = useState(notifications);
-
-  const dismiss = (id: string) => setItems((prev) => prev.filter((n) => n.id !== id));
+  const { data, loading, error } = useDashboard();
+  const [dismissed, setDismissed] = useState<string[]>([]);
+  const items = (data?.notifications ?? []).filter((item) => !dismissed.includes(item.id));
+  const dismiss = (id: string) => setDismissed((prev) => [...prev, id]);
 
   return (
     <Card padding="lg" className="h-full flex flex-col">
@@ -26,7 +27,7 @@ export default function NotificationsCard() {
           </div>
           <div>
             <div className="font-display font-bold text-ink-900">Notifications</div>
-            <div className="text-xs text-ink-600">{items.length} new updates</div>
+            <div className="text-xs text-ink-600">{loading ? 'Loading updates…' : `${items.length} recorded updates`}</div>
           </div>
         </div>
         <button className="text-xs font-bold text-brand-600 hover:text-brand-700">Mark all read</button>

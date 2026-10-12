@@ -4,7 +4,7 @@ import Card from '@/components/ui/GlassCard';
 import { useDashboard } from '@/hooks/useDashboard';
 
 export default function FarmerProfileCard() {
-  const { data, loading, error } = useDashboard();
+  const { data, loading } = useDashboard();
   const farmerProfile = data?.farmerProfile ?? { initials: 'F', name: 'Farmer profile', verified: false, plan: 'Farm workspace', location: 'Add farm location', activeFields: 0, seasonsCompleted: 0, rating: 0 };
   return (
     <Card padding="lg" className="h-full">

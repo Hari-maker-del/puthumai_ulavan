@@ -13,6 +13,8 @@ A route existing does not prove that its full workflow is production-ready.
 ## Changes in this branch
 
 - Unknown URLs render the dedicated `NotFoundPage` instead of silently showing generic informational content.
+- Adds `/pages`, a public page directory linked from the landing-page navigation and footer, so visitors can discover all informational/recovery routes and farmer tools in one place.
+- Adds the missing Farm Outcomes entry to the authenticated farmer sidebar.
 - The error boundary no longer promises that user data is safe after a crash; it warns that unsaved changes may be lost and links home.
 - A repeatable `pages:audit` check verifies that each route rendered by `ProfessionalPage` has a matching page configuration and that all ten HTTP error destinations are registered.
 
@@ -41,6 +43,7 @@ A route existing does not prove that its full workflow is production-ready.
 
 - Several pages are informational guidance pages, not interactive forms or self-service workflows. For example, data export, account deletion, feedback, unsubscribe and issue reporting currently explain the support path rather than completing the action themselves.
 - System-status content explicitly does not have live monitoring connected.
+- The page directory is navigation, not proof of interactive behavior; several entries remain informational or support-assisted.
 - A page-level smoke check does not prove Supabase authorization, form submission, AI provider availability, offline synchronization or mobile screen-reader behavior.
 - HTTP routes such as `/500` are friendly destinations inside the SPA; they do not automatically make the hosting platform return the corresponding HTTP status code.
 - Do not describe pages as complete until the relevant action, loading state, empty state, validation, success state, failure state and accessibility behavior have been tested.

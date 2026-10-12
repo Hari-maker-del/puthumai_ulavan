@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import {
-  ArrowLeft, ArrowRight, BookOpen, CheckCircle2, CircleHelp, Clock3,
+  ArrowLeft, ArrowRight, BookOpen, CheckCircle2, HelpCircle, Clock3,
   CloudOff, FileText, Home, Leaf, Mail, RefreshCw, ShieldCheck,
   TriangleAlert, Wifi, Wrench, XCircle,
 } from 'lucide-react';

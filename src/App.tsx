@@ -20,6 +20,7 @@ const ResetPasswordPage      = lazy(() => import('@/pages/ResetPasswordPage'));
 const AuthCallbackPage       = lazy(() => import('@/pages/AuthCallbackPage'));
 const VerifyEmailPage        = lazy(() => import('@/pages/VerifyEmailPage'));
 const ProfessionalPage       = lazy(() => import('@/pages/ProfessionalPage'));
+const NotFoundPage            = lazy(() => import('@/pages/NotFoundPage'));
 const DashboardLayout        = lazy(() => import('@/components/dashboard/DashboardLayout'));
 const DashboardHome          = lazy(() => import('@/pages/app/DashboardHome'));
 const FarmProfilePage        = lazy(() => import('@/pages/app/FarmProfilePage'));
@@ -198,7 +199,7 @@ export default function App() {
                 <Route path="/app/*" element={<Navigate to="/dashboard" replace />} />
 
                 {/* Keep the catch-all last so unknown URLs get a real 404 page. */}
-                <Route path="*" element={<ProfessionalPage />} />
+                <Route path="*" element={<NotFoundPage />} />
               </Routes>
             </Suspense>
             </RecommendationProvider>

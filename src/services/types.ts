@@ -168,6 +168,10 @@ export interface CropRecommendRequest {
   season: string;
   district?: string;
   temperature?: number;
+  humidity?: number;
+  nitrogen?: number;
+  phosphorus?: number;
+  potassium?: number;
   farmArea?: number;
   previousCrop?: string;
   waterAvailability?: string;

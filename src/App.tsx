@@ -21,6 +21,7 @@ const AuthCallbackPage       = lazy(() => import('@/pages/AuthCallbackPage'));
 const VerifyEmailPage        = lazy(() => import('@/pages/VerifyEmailPage'));
 const ProfessionalPage       = lazy(() => import('@/pages/ProfessionalPage'));
 const NotFoundPage            = lazy(() => import('@/pages/NotFoundPage'));
+const PageDirectoryPage       = lazy(() => import('@/pages/PageDirectoryPage'));
 const DashboardLayout        = lazy(() => import('@/components/dashboard/DashboardLayout'));
 const DashboardHome          = lazy(() => import('@/pages/app/DashboardHome'));
 const FarmProfilePage        = lazy(() => import('@/pages/app/FarmProfilePage'));
@@ -75,6 +76,7 @@ export default function App() {
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 <Route path="/" element={<LandingPage />} />
+                <Route path="/pages" element={<PageDirectoryPage />} />
 
                 {/* Public information, help, legal and system pages */}
                 <Route path="/about" element={<ProfessionalPage />} />

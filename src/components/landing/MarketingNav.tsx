@@ -7,6 +7,7 @@ const links = [
   { label: 'How it Works', href: '#how-it-works' },
   { label: 'Pricing', href: '#pricing' },
   { label: 'About Us', href: '#about' },
+  { label: 'All Pages', href: '/pages' },
 ];
 
 export default function MarketingNav() {

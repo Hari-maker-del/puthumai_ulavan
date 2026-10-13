@@ -1,52 +1,32 @@
+import { UserRound, Sprout, ListChecks } from 'lucide-react';
+
 const steps = [
-  {
-    num: '01',
-    title: 'Set up your farm',
-    desc: 'Add your land, crops and location once. We tailor every insight to your specific farm.',
-  },
-  {
-    num: '02',
-    title: 'Get live insights',
-    desc: 'Weather, crop health and profit projections update automatically as conditions change.',
-  },
-  {
-    num: '03',
-    title: 'Act with confidence',
-    desc: 'Receive timely recommendations and alerts so you always know the right next step.',
-  },
+  { num: '01', icon: UserRound, title: 'Tell us about your farm', desc: 'Add your location, land size, soil details, water source and the crops you grow. Share only the details you know.' },
+  { num: '02', icon: Sprout, title: 'Explore relevant tools', desc: 'Use the available crop, weather, crop-health and expense tools with your farm information.' },
+  { num: '03', icon: ListChecks, title: 'Choose your next step', desc: 'Review the information, compare it with what you see in the field, and decide what makes sense for your farm.' },
 ];
 
 export default function HowItWorks() {
   return (
-    <section id="how-it-works" className="bg-brand-50/50 py-20 lg:py-28">
+    <section id="how-it-works" className="bg-white py-20 lg:py-24">
       <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-12">
-        <div className="mx-auto max-w-2xl text-center">
-          <span className="text-xs font-semibold uppercase tracking-wider text-brand-600">
-            Simple to start
-          </span>
-          <h2 className="mt-3 font-display text-3xl font-bold text-brand-950 sm:text-4xl text-balance">
-            Up and running in three steps
-          </h2>
+        <div className="max-w-2xl">
+          <span className="text-xs font-bold uppercase tracking-[0.18em] text-brand-600">Start without the confusion</span>
+          <h2 className="mt-3 font-display text-3xl font-bold text-brand-950 sm:text-4xl">Three simple steps, starting with your farm</h2>
+          <p className="mt-4 text-base leading-7 text-brand-800/70">You do not need to be a technology expert. Start with the information you have and add more as you go.</p>
         </div>
-
-        <div className="mt-14 grid grid-cols-1 gap-8 md:grid-cols-3">
-          {steps.map((s, i) => (
-            <div key={s.num} className="relative">
-              {i < steps.length - 1 && (
-                <div className="absolute left-0 top-8 hidden h-px w-full bg-brand-200 md:block" />
-              )}
-              <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-600 font-display text-xl font-bold text-white shadow-card">
-                {s.num}
+        <ol className="mt-10 grid gap-5 md:grid-cols-3">
+          {steps.map(({ num, icon: Icon, title, desc }) => (
+            <li key={num} className="rounded-2xl border border-brand-100 bg-[#FCFDFB] p-6">
+              <div className="flex items-center justify-between">
+                <span className="font-display text-3xl font-bold text-brand-200">{num}</span>
+                <span className="grid h-12 w-12 place-items-center rounded-xl bg-brand-50 text-brand-600"><Icon className="h-6 w-6" /></span>
               </div>
-              <h3 className="mt-5 text-lg font-bold text-brand-900">
-                {s.title}
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-brand-800/70">
-                {s.desc}
-              </p>
-            </div>
+              <h3 className="mt-6 text-lg font-bold text-brand-950">{title}</h3>
+              <p className="mt-2 text-sm leading-6 text-brand-800/70">{desc}</p>
+            </li>
           ))}
-        </div>
+        </ol>
       </div>
     </section>
   );

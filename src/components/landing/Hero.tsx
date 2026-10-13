@@ -4,7 +4,6 @@ import {
   ArrowRight,
   Check,
   CloudSun,
-  Droplets,
   Leaf,
   MapPin,
   Sprout,

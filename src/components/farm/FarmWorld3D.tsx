@@ -277,7 +277,7 @@ function FarmScene({ stage }: { stage: CropStage }) {
             <dodecahedronGeometry args={[0.055, 0]} />
             <meshStandardMaterial color={index % 2 ? '#887d68' : '#a79b7f'} roughness={1} />
           </mesh>
-        ))
+        ))}
 
         <VillageHouse position={[-4.7, 0.02, -1.7]} />
         <VillageHouse position={[-3.45, 0.02, -2.25]} />

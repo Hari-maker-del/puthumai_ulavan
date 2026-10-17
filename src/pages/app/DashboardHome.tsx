@@ -8,6 +8,7 @@ import CropHealthScore from '@/components/dashboard/CropHealthScore';
 import ChartsSection from '@/components/dashboard/ChartsSection';
 import AIAssistantQuickPanel from '@/components/dashboard/AIAssistantQuickPanel';
 import FarmCommandCenter from '@/components/dashboard/FarmCommandCenter';
+import FarmWorld3D from '@/components/farm/FarmWorld3D';
 
 export default function DashboardHome() {
   return (

@@ -1,4 +1,5 @@
 import { Canvas } from '@react-three/fiber';
+import { OrbitControls } from '@react-three/drei';
 import { Suspense } from 'react';
 
 function Field({ position, size, color }: { position: [number, number, number]; size: [number, number, number]; color: string }) {
@@ -96,6 +97,7 @@ export default function FarmWorld3D() {
         <Canvas shadows camera={{ position: [7.8, 6.4, 9.2], fov: 35 }} dpr={[1, 1.5]} gl={{ antialias: true, alpha: false }}>
           <Suspense fallback={null}>
             <FarmScene />
+            <OrbitControls enablePan={false} minDistance={8} maxDistance={17} minPolarAngle={0.45} maxPolarAngle={Math.PI / 2.05} />
           </Suspense>
         </Canvas>
       </div>

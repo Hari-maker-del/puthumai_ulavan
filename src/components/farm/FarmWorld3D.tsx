@@ -1,5 +1,5 @@
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { OrbitControls, Sky } from '@react-three/drei';
 import { Suspense, useState, type ReactNode } from 'react';
 
 type CropStage = 'seedling' | 'growing' | 'harvest';
@@ -165,11 +165,31 @@ function FarmScene({ stage }: { stage: CropStage }) {
 
   return (
     <>
-      <color attach="background" args={['#b8d8d5']} />
-      <fog attach="fog" args={['#b8d8d5', 14, 28]} />
-      <ambientLight intensity={0.85} />
-      <hemisphereLight args={['#e5f5ff', '#758d4b', 1.05]} />
-      <directionalLight position={[5, 11, 6]} intensity={2.1} castShadow shadow-mapSize-width={1024} shadow-mapSize-height={1024} />
+      <Sky
+        distance={450000}
+        sunPosition={[90, 24, 70]}
+        inclination={0.48}
+        azimuth={0.22}
+        turbidity={7.5}
+        rayleigh={2.2}
+        mieCoefficient={0.004}
+        mieDirectionalG={0.82}
+      />
+      <fog attach="fog" args={['#c8dfd9', 15, 32]} />
+      <ambientLight intensity={0.48} />
+      <hemisphereLight args={['#e8f4ff', '#68794a', 1.2]} />
+      <directionalLight
+        position={[7, 12, 5]}
+        intensity={2.7}
+        castShadow
+        shadow-mapSize-width={2048}
+        shadow-mapSize-height={2048}
+        shadow-camera-left={-10}
+        shadow-camera-right={10}
+        shadow-camera-top={10}
+        shadow-camera-bottom={-10}
+        shadow-bias={-0.00015}
+      />
       <group position={[0, -0.58, 0]} rotation={[-0.08, -0.16, 0]}>
         {/* Uneven earth base and raised, muddy field bunds */}
         <Field position={[0, -0.12, 0]} size={[15.5, 0.32, 8.5]} color="#7d8750" />
@@ -179,6 +199,18 @@ function FarmScene({ stage }: { stage: CropStage }) {
         {/* Shallow paddy water with narrow raised soil borders */}
         <Field position={[-0.15, 0.068, -0.02]} size={[4.75, 0.025, 3.28]} color="#7fae9d" roughness={0.22} />
         <Field position={[3.55, 0.068, 0.04]} size={[2.78, 0.025, 3.08]} color="#8ab6a5" roughness={0.2} />
+        {/* Soft surface rings suggest breeze and small movement in the shallow water. */}
+        {[
+          [-1.45, -0.75, 0.2],
+          [0.75, 0.55, 0.16],
+          [3.25, -0.62, 0.18],
+          [4.1, 0.62, 0.12],
+        ].map(([x, z, radius], index) => (
+          <mesh key={`water-ripple-${index}`} position={[x, 0.086, z]} rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[radius * 0.7, radius, 32]} />
+            <meshBasicMaterial color="#d7eee1" transparent opacity={0.42} side={2} />
+          </mesh>
+        ))
         <Field position={[-0.15, 0.09, -1.78]} size={[5.0, 0.1, 0.12]} color="#8a7652" />
         <Field position={[-0.15, 0.09, 1.74]} size={[5.0, 0.1, 0.12]} color="#8a7652" />
         <Field position={[-2.68, 0.09, -0.02]} size={[0.12, 0.1, 3.55]} color="#8a7652" />
@@ -195,7 +227,23 @@ function FarmScene({ stage }: { stage: CropStage }) {
         {crops}
         {secondPlot}
         {/* Farm access track */}
-        <Field position={[0.4, 0.04, 3.05]} size={[11.8, 0.08, 0.42]} color="#c0a77c" />
+        <Field position={[0.4, 0.04, 3.05]} size={[11.8, 0.08, 0.42]} color="#b49a70" />
+        {/* Wheel-worn grooves and scattered stones break up the smooth access track. */}
+        {[-0.1, 0.1].map((offset) => (
+          <Field key={offset} position={[0.4, 0.083, 3.05 + offset]} size={[11.45, 0.012, 0.025]} color="#8e7958" />
+        ))}
+        {Array.from({ length: 18 }, (_, index) => (
+          <mesh
+            key={`track-stone-${index}`}
+            position={[-5.1 + index * 0.62, 0.09, 2.86 + (index % 3) * 0.17]}
+            rotation={[0, index * 0.7, 0]}
+            scale={[0.7 + (index % 3) * 0.2, 0.5, 0.7]}
+            receiveShadow
+          >
+            <dodecahedronGeometry args={[0.055, 0]} />
+            <meshStandardMaterial color={index % 2 ? '#887d68' : '#a79b7f'} roughness={1} />
+          </mesh>
+        ))
 
         <VillageHouse position={[-4.7, 0.02, -1.7]} />
         <VillageHouse position={[-3.45, 0.02, -2.25]} />

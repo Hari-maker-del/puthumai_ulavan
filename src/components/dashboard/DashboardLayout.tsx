@@ -39,7 +39,7 @@ export default function DashboardLayout() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen flex bg-gray-50">
+      <div className="min-h-screen flex bg-[#f5f7ef]">
         <Sidebar
           collapsed={collapsed}
           onToggle={() => setCollapsed((c) => !c)}
@@ -55,7 +55,7 @@ export default function DashboardLayout() {
               <span><strong>Offline mode:</strong> cached farm information remains available. Live weather, AI and market services will resume when you reconnect.</span>
             </div>
           )}
-          <main className="flex-1 p-4 sm:p-6 pb-24 lg:pb-6 max-w-7xl mx-auto w-full">
+          <main className="flex-1 p-4 sm:p-6 pb-24 lg:pb-6 max-w-7xl mx-auto w-full bg-gradient-to-b from-[#f5f7ef] via-[#f8faf5] to-[#f2f6ed]">
             <Outlet key={realtimeRefreshKey} />
           </main>
         </div>

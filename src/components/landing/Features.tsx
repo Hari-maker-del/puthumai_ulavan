@@ -1,4 +1,4 @@
-import { CloudRain, Sprout, ScanLine, Wallet, TrendingUp, MessageCircle, Languages } from 'lucide-react';
+import { CloudRain, Sprout, ScanLine, Wallet, TrendingUp, MessageCircle } from 'lucide-react';
 
 const features = [
   { icon: Sprout, title: 'Not sure what to grow?', desc: 'Explore crop suggestions using details such as soil, season, rainfall and the conditions you provide.' , tag: 'Plan your season'},

@@ -6,6 +6,7 @@ import HowItWorks from '@/components/landing/HowItWorks';
 import Pricing from '@/components/landing/Pricing';
 import About from '@/components/landing/About';
 import Footer from '@/components/landing/Footer';
+import FarmWorld3D from '@/components/farm/FarmWorld3D';
 import { ChevronDown, MessageCircleQuestion } from 'lucide-react';
 
 const questions = [
@@ -46,6 +47,9 @@ export default function LandingPage() {
       <MarketingNav />
       <main>
         <Hero />
+        <section className="mx-auto max-w-7xl px-5 py-10 sm:px-8 lg:px-12 lg:py-14" aria-label="Explore the 3D farm experience">
+          <FarmWorld3D />
+        </section>
         <Features />
         <Benefits />
         <HowItWorks />

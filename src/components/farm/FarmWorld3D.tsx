@@ -244,7 +244,7 @@ function FarmScene({ stage }: { stage: CropStage }) {
             <ringGeometry args={[radius * 0.7, radius, 32]} />
             <meshBasicMaterial color="#d7eee1" transparent opacity={0.42} side={2} />
           </mesh>
-        ))
+        ))}
         <Field position={[-0.15, 0.09, -1.78]} size={[5.0, 0.1, 0.12]} color="#8a7652" />
         <Field position={[-0.15, 0.09, 1.74]} size={[5.0, 0.1, 0.12]} color="#8a7652" />
         <Field position={[-2.68, 0.09, -0.02]} size={[0.12, 0.1, 3.55]} color="#8a7652" />

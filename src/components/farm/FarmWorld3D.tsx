@@ -1,6 +1,6 @@
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
-import { Suspense } from 'react';
+import { Suspense, type ReactNode } from 'react';
 
 function Field({ position, size, color }: { position: [number, number, number]; size: [number, number, number]; color: string }) {
   return (
@@ -48,7 +48,7 @@ function VillageHouse({ position }: { position: [number, number, number] }) {
 }
 
 function FarmScene() {
-  const rows = [];
+  const rows: ReactNode[] = [];
   for (let row = 0; row < 9; row += 1) {
     for (let col = 0; col < 13; col += 1) {
       const x = col * 0.72 - 4.4;

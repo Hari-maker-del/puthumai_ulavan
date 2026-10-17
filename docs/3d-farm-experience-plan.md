@@ -23,5 +23,10 @@ Give the existing React + TypeScript application a consistent, farm-inspired vis
 4. Verify that dashboard cards, sidebar routes, onboarding redirects, sign-in persistence, offline mode, and realtime refresh still work.
 5. Test WebGL fallback on devices where GPU/WebGL support is unavailable; consider a static image fallback before production rollout.
 
-## Next realism phase
-Use optimized, appropriately licensed GLB assets or photogrammetry for Tamil Nadu paddy plots, irrigation channels, farm paths, village homes, banana/coconut trees, and seasonal crop stages. The current procedural scene now includes shallow paddy plots, bunds, irrigation water, rice clumps, coconut palms, banana plants, village-house details, a distant ridgeline, and a visual crop-stage selector. The selector is explicitly illustrative and does not claim to modify actual crop records. Connect field selection to authenticated plot/crop records only after the data model supports stable plot identifiers and coordinates. Avoid fabricating crop-health or yield values.
+## Visual realism pass
+- Use a physical sky model and a warmer, directional sun with higher-resolution shadow maps and a bounded shadow camera.
+- Add subtle shallow-water ripple rings to paddy plots, plus worn track grooves and scattered stones for more varied ground detail.
+- Keep all new scene details procedural and dependency-light; do not rely on third-party runtime asset URLs that may break due to CORS, licensing, or availability.
+
+## Remaining production realism work
+The scene is still stylized procedural geometry, not photogrammetry-grade photorealism. The next major step is to source optimized, appropriately licensed GLB assets or photogrammetry for Tamil Nadu paddy plots, irrigation channels, farm paths, village homes, banana/coconut trees, and seasonal crop stages, then store/version the assets with the project or a reliable asset host. Add a static fallback for devices without WebGL and validate performance on low-end Android phones. The crop-stage selector remains illustrative and does not modify actual crop records. Connect field selection to authenticated plot/crop records only after the data model supports stable plot identifiers and coordinates. Avoid fabricating crop-health or yield values.

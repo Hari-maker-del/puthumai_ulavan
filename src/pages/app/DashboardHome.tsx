@@ -14,6 +14,7 @@ export default function DashboardHome() {
   return (
     <div className="space-y-5">
       <WelcomeCard />
+      <FarmWorld3D />
       <FarmCommandCenter />
 
       <KpiStrip />

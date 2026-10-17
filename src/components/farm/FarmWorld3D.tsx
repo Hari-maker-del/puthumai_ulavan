@@ -1,6 +1,7 @@
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Sky } from '@react-three/drei';
-import { Suspense, useState, type ReactNode } from 'react';
+import { Suspense, useMemo, useState, type ReactNode } from 'react';
+import { DataTexture, RepeatWrapping, SRGBColorSpace, type Texture } from 'three';
 
 type CropStage = 'seedling' | 'growing' | 'harvest';
 
@@ -10,16 +11,17 @@ const stageLabels: Record<CropStage, string> = {
   harvest: 'Golden harvest',
 };
 
-function Field({ position, size, color, roughness = 0.92 }: {
+function Field({ position, size, color, roughness = 0.92, map }: {
   position: [number, number, number];
   size: [number, number, number];
   color: string;
   roughness?: number;
+  map?: Texture;
 }) {
   return (
     <mesh position={position} receiveShadow castShadow>
       <boxGeometry args={size} />
-      <meshStandardMaterial color={color} roughness={roughness} />
+      <meshStandardMaterial color={color} map={map} bumpMap={map} bumpScale={map ? 0.025 : 0} roughness={roughness} />
     </mesh>
   );
 }
@@ -137,7 +139,39 @@ function VillageHouse({ position }: { position: [number, number, number] }) {
   );
 }
 
+function createProceduralTexture(
+  base: [number, number, number],
+  variation: number,
+  repeat: [number, number],
+): DataTexture {
+  const size = 128;
+  const data = new Uint8Array(size * size * 4);
+
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const index = (y * size + x) * 4;
+      // Deterministic pixel noise gives the scene a textured surface without remote assets.
+      const seed = (Math.imul(x + 1, 374761393) ^ Math.imul(y + 1, 668265263)) >>> 0;
+      const noise = ((Math.imul(seed ^ (seed >>> 13), 1274126177) >>> 0) % (variation * 2 + 1)) - variation;
+      data[index] = Math.max(0, Math.min(255, base[0] + noise));
+      data[index + 1] = Math.max(0, Math.min(255, base[1] + noise));
+      data[index + 2] = Math.max(0, Math.min(255, base[2] + noise));
+      data[index + 3] = 255;
+    }
+  }
+
+  const texture = new DataTexture(data, size, size);
+  texture.wrapS = RepeatWrapping;
+  texture.wrapT = RepeatWrapping;
+  texture.repeat.set(repeat[0], repeat[1]);
+  texture.colorSpace = SRGBColorSpace;
+  texture.needsUpdate = true;
+  return texture;
+}
+
 function FarmScene({ stage }: { stage: CropStage }) {
+  const earthTexture = useMemo(() => createProceduralTexture([126, 101, 67], 24, [7, 4]), []);
+  const grassTexture = useMemo(() => createProceduralTexture([104, 130, 69], 19, [6, 3]), []);
   const crops: ReactNode[] = [];
   for (let row = 0; row < 8; row += 1) {
     for (let col = 0; col < 11; col += 1) {
@@ -192,9 +226,9 @@ function FarmScene({ stage }: { stage: CropStage }) {
       />
       <group position={[0, -0.58, 0]} rotation={[-0.08, -0.16, 0]}>
         {/* Uneven earth base and raised, muddy field bunds */}
-        <Field position={[0, -0.12, 0]} size={[15.5, 0.32, 8.5]} color="#7d8750" />
-        <Field position={[-0.15, -0.005, -0.02]} size={[5.0, 0.13, 3.55]} color="#6f8c48" />
-        <Field position={[3.55, -0.005, 0.04]} size={[3.0, 0.13, 3.35]} color="#728d48" />
+        <Field position={[0, -0.12, 0]} size={[15.5, 0.32, 8.5]} color="#ffffff" map={grassTexture} />
+        <Field position={[-0.15, -0.005, -0.02]} size={[5.0, 0.13, 3.55]} color="#ffffff" map={earthTexture} />
+        <Field position={[3.55, -0.005, 0.04]} size={[3.0, 0.13, 3.35]} color="#ffffff" map={earthTexture} />
 
         {/* Shallow paddy water with narrow raised soil borders */}
         <Field position={[-0.15, 0.068, -0.02]} size={[4.75, 0.025, 3.28]} color="#7fae9d" roughness={0.22} />
@@ -227,7 +261,7 @@ function FarmScene({ stage }: { stage: CropStage }) {
         {crops}
         {secondPlot}
         {/* Farm access track */}
-        <Field position={[0.4, 0.04, 3.05]} size={[11.8, 0.08, 0.42]} color="#b49a70" />
+        <Field position={[0.4, 0.04, 3.05]} size={[11.8, 0.08, 0.42]} color="#ffffff" map={earthTexture} />
         {/* Wheel-worn grooves and scattered stones break up the smooth access track. */}
         {[-0.1, 0.1].map((offset) => (
           <Field key={offset} position={[0.4, 0.083, 3.05 + offset]} size={[11.45, 0.012, 0.025]} color="#8e7958" />

@@ -137,8 +137,11 @@ async function callGemini(contents, systemInstruction, fastMode = false) {
   if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is missing on the server.');
 
   const primary = fastMode ? FAST_MODEL : MODEL;
-  const candidates = [primary];
-  if (!fastMode && FALLBACK_MODEL && FALLBACK_MODEL !== primary) candidates.push(FALLBACK_MODEL);
+  // If the fast model is unavailable or overloaded, fall back to the regular
+  // production model instead of making everyday chat fail outright.
+  const candidates = fastMode
+    ? [FAST_MODEL, MODEL, FALLBACK_MODEL].filter((model, index, all) => model && all.indexOf(model) === index)
+    : [MODEL, FALLBACK_MODEL].filter((model, index, all) => model && all.indexOf(model) === index);
 
   // Vercel's configured function budget is 30 seconds. Try each model once
   // with a bounded timeout rather than retrying a slow model past the request

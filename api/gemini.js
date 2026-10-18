@@ -86,7 +86,7 @@ async function validateToken(token) {
 function buildSystemInstruction(context, language) {
   let instruction = SYSTEM_INSTRUCTION_BASE;
   if (context?.trim()) instruction += `\n\nFARMER CONTEXT:\n${String(context).trim().slice(0, MAX_CONTEXT_LENGTH)}`;
-  if (language && language !== 'en') instruction += `\n\nRespond primarily in ${String(language).slice(0, 40)}.`;
+  if (language && language !== 'en') instruction += `\n\nMANDATORY RESPONSE LANGUAGE: ${String(language).slice(0, 240)} This rule overrides the language of earlier messages and all general style instructions. Respond in this language for the whole answer, including headings, bullets, explanations, safety notes, and follow-up questions. Do not switch languages mid-answer.`;
   return instruction;
 }
 

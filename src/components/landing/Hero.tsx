@@ -55,22 +55,22 @@ export default function Hero() {
             One calm, clear workspace for crop decisions, field activities, farm expenses and local conditions—built to support the people who know their land best.
           </p>
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <a href="/signup" className="group inline-flex min-h-13 items-center justify-center gap-3 rounded-xl bg-[#28633B] px-6 py-4 text-sm font-bold text-white shadow-[0_12px_28px_rgba(40,99,59,0.22)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#1D4F2E] hover:shadow-[0_16px_32px_rgba(40,99,59,0.28)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#28633B] focus-visible:ring-offset-2">
+          <div className="mt-7 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:items-center">
+            <a href="/signup" className="group inline-flex min-h-13 w-full items-center justify-center gap-3 rounded-xl bg-[#28633B] px-6 py-4 text-sm font-bold text-white sm:w-fit shadow-[0_12px_28px_rgba(40,99,59,0.22)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#1D4F2E] hover:shadow-[0_16px_32px_rgba(40,99,59,0.28)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#28633B] focus-visible:ring-offset-2">
               Start your farm workspace
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </a>
-            <a href="#how-it-works" className="inline-flex min-h-13 items-center justify-center gap-2 rounded-xl px-5 py-4 text-sm font-bold text-[#28543A] transition hover:bg-white/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#28633B]">
+            <a href="#how-it-works" className="hidden min-h-13 items-center justify-center gap-2 rounded-xl px-5 py-4 text-sm font-bold text-[#28543A] sm:inline-flex transition hover:bg-white/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#28633B]">
               See how it works <ArrowDownRight className="h-4 w-4" />
             </a>
           </div>
 
-          <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3 text-xs font-semibold text-[#627267]">
+          <div className="mt-7 hidden flex-wrap items-center gap-x-5 gap-y-3 text-xs font-semibold text-[#627267] sm:mt-8 sm:flex">
             <span className="inline-flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#43824B]" /> Your farm data stays yours</span>
             <span className="inline-flex items-center gap-2"><Check className="h-4 w-4 text-[#43824B]" /> Guidance, not guesswork</span>
           </div>
 
-          <div className="mt-9 grid max-w-xl grid-cols-3 gap-3 border-t border-[#DCE5D8] pt-5">
+          <div className="mt-9 hidden max-w-xl grid-cols-3 gap-3 border-t border-[#DCE5D8] pt-5 sm:grid">
             <div><p className="font-display text-xl font-bold tracking-tight text-[#1D4D31] sm:text-2xl">Plan</p><p className="mt-1 text-[11px] leading-4 text-[#718073] sm:text-xs">Crop & season</p></div>
             <div className="border-l border-[#DCE5D8] pl-3 sm:pl-5"><p className="font-display text-xl font-bold tracking-tight text-[#1D4D31] sm:text-2xl">Track</p><p className="mt-1 text-[11px] leading-4 text-[#718073] sm:text-xs">Costs & activities</p></div>
             <div className="border-l border-[#DCE5D8] pl-3 sm:pl-5"><p className="font-display text-xl font-bold tracking-tight text-[#1D4D31] sm:text-2xl">Learn</p><p className="mt-1 text-[11px] leading-4 text-[#718073] sm:text-xs">Farm-specific context</p></div>

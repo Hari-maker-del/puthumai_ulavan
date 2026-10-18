@@ -38,6 +38,29 @@ function farmerSafeError(error: unknown, copy: ReturnType<typeof getAiCopy>): st
   return `${copy.temporarilyUnavailable}\n\n${copy.unavailableDesc}`;
 }
 
+function renderReplyLine(line: string, index: number) {
+  if (!line.trim()) return <div key={index} className="h-1" />;
+
+  const heading = line.match(/^#{1,3}\s+(.+)$/);
+  const bullet = line.match(/^\s*[-*•]\s+(.+)$/);
+  const numbered = line.match(/^\s*\d+[.)]\s+(.+)$/);
+  const text = heading?.[1] ?? bullet?.[1] ?? numbered?.[1] ?? line;
+  const parts = text.split(/(\*\*.*?\*\*)/g).map((part, partIndex) =>
+    part.startsWith('**') && part.endsWith('**')
+      ? <strong key={partIndex} className="font-bold text-ink-900">{part.slice(2, -2)}</strong>
+      : part,
+  );
+
+  if (heading) return <p key={index} className="mt-2 text-sm font-extrabold text-brand-900">{parts}</p>;
+  if (bullet || numbered) return (
+    <div key={index} className="mt-1 flex items-start gap-2">
+      <span className="mt-0.5 shrink-0 font-bold text-brand-600">{numbered ? line.trim().match(/^\d+/)?.[0] + '.' : '•'}</span>
+      <p className="min-w-0 flex-1">{parts}</p>
+    </div>
+  );
+  return <p key={index} className={index > 0 ? 'mt-1' : ''}>{parts}</p>;
+}
+
 export default function AIAssistantPage() {
   const { user } = useAuth();
   const [copilotContext, setCopilotContext] = useState<CopilotContext | null>(null);
@@ -74,13 +97,20 @@ export default function AIAssistantPage() {
   useEffect(() => { sessionRef.current = null; }, [language]);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, processing]);
 
-  const refreshContext = useCallback(async () => {
+  const contextFetchedAtRef = useRef(0);
+
+  const refreshContext = useCallback(async (force = false) => {
     if (!user?.id) return null;
+    // Farm context (especially live weather) is expensive; reuse it briefly between chat turns.
+    if (!force && contextRef.current && Date.now() - contextFetchedAtRef.current < 120_000) {
+      return contextRef.current;
+    }
     setContextLoading(true);
     setContextError(null);
     try {
       const next = await buildCopilotContext(user.id);
       contextRef.current = next;
+      contextFetchedAtRef.current = Date.now();
       setCopilotContext(next);
       sessionRef.current = null;
       return next;
@@ -309,7 +339,7 @@ export default function AIAssistantPage() {
         <GlassCard padding="md" className="flex min-w-0 max-w-full flex-col min-h-[500px] sm:min-h-[600px] lg:order-none order-first">
           <div className="flex-1 min-h-[360px] overflow-y-auto p-2 sm:p-3 space-y-3 scrollbar-none">
             {messages.length === 0 && <div className="h-full min-h-[420px] grid place-items-center text-center py-10"><div><div className="mx-auto h-20 w-20 rounded-3xl bg-brand-100 grid place-items-center mb-4"><Bot size={38} className="text-brand-600" /></div><div className="font-display font-extrabold text-xl text-ink-900">{copy.start}</div><div className="text-sm text-ink-600 mt-1">{copy.askAnything}</div></div></div>}
-            {messages.map((m) => <motion.div key={m.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>{m.role === 'assistant' && <div className="h-7 w-7 rounded-full bg-brand-600 grid place-items-center mr-2 mt-1 flex-shrink-0"><Bot size={14} className="text-white" /></div>}<div className={`max-w-[92%] sm:max-w-[85%] break-words rounded-2xl px-3 sm:px-4 py-2.5 text-sm leading-relaxed ${m.role === 'user' ? 'bg-brand-600 text-white rounded-br-md' : m.text.includes(copy.temporarilyUnavailable) ? 'bg-amber-50 border border-amber-100 text-amber-900 rounded-bl-md' : 'bg-brand-50 border border-gray-100 text-ink-900 rounded-bl-md'}`}>{m.text.split('\n').map((line, li) => line === '' ? <br key={li} /> : <p key={li} className={li > 0 ? 'mt-1' : ''}>{line}</p>)}<div className={`mt-1 text-[10px] ${m.role === 'user' ? 'text-brand-100' : 'text-ink-600'}`}>{m.time}</div></div></motion.div>)}
+            {messages.map((m) => <motion.div key={m.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>{m.role === 'assistant' && <div className="h-7 w-7 rounded-full bg-brand-600 grid place-items-center mr-2 mt-1 flex-shrink-0"><Bot size={14} className="text-white" /></div>}<div className={`max-w-[92%] sm:max-w-[85%] break-words rounded-2xl px-3 sm:px-4 py-2.5 text-sm leading-relaxed ${m.role === 'user' ? 'bg-brand-600 text-white rounded-br-md' : m.text.includes(copy.temporarilyUnavailable) ? 'bg-amber-50 border border-amber-100 text-amber-900 rounded-bl-md' : 'bg-brand-50 border border-gray-100 text-ink-900 rounded-bl-md'}`}>{m.role === 'assistant' ? m.text.split('\n').map((line, li) => renderReplyLine(line, li)) : m.text.split('\n').map((line, li) => line === '' ? <br key={li} /> : <p key={li} className={li > 0 ? 'mt-1' : ''}>{line}</p>)}<div className={`mt-1 text-[10px] ${m.role === 'user' ? 'text-brand-100' : 'text-ink-600'}`}>{m.time}</div></div></motion.div>)}
             <AnimatePresence>{processing && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex justify-start"><div className="h-7 w-7 rounded-full bg-brand-600 grid place-items-center mr-2 mt-1 flex-shrink-0"><Bot size={14} className="text-white" /></div><div className="bg-brand-50 border border-gray-100 rounded-2xl rounded-bl-md px-4 py-3 flex gap-1 items-center"><span className="text-[11px] text-ink-600 mr-1">{copy.processing}</span>{[0,1,2].map((i)=><motion.span key={i} animate={{y:[0,-4,0]}} transition={{duration:.8,repeat:Infinity,delay:i*.15}} className="h-1.5 w-1.5 rounded-full bg-brand-400 inline-block" />)}</div></motion.div>}</AnimatePresence>
             <div ref={endRef} />
           </div>

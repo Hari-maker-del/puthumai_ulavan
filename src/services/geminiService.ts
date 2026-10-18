@@ -60,6 +60,37 @@ async function callGemini(body: Record<string, unknown>): Promise<string> {
   return payload.text || '(No response from Gemini)';
 }
 
+
+/** Detect the language of this turn so a previous UI preference cannot force English replies. */
+function detectReplyLanguage(text: string, preferredLanguage?: string): string {
+  // Tamil-script input is the strongest signal, including speech-to-text output.
+  if (/[\u0B80-\u0BFF]/u.test(text)) {
+    return 'Tamil (தமிழ்). Write the entire answer in natural Tamil using Tamil script. Do not mix in English sentences or Tanglish; keep only unavoidable crop/product names and standard units in their original form.';
+  }
+
+  // Speech recognition may return Tamil spoken words in Latin script (Tanglish).
+  const tokens = text.toLowerCase().match(/[a-z]+/g) ?? [];
+  const tamilRomanWords = new Set([
+    'enna','epdi','eppadi','epadi','yen','yenn','ennaiku','eppo','enga','engaluku',
+    'naan','nanga','neenga','nee','unga','ungal','irukku','iruka','irukaa','illa',
+    'venum','vendum','pannunga','pannu','panrathu','panradhu','seiyanum','sollunga',
+    'sollu','kudunga','kudu','aagum','aachu','varum','poga','poguma','seri','romba',
+    'thanni','nel','vivasayam','vivasaayi','mannu','payir','uram','poochi','noi',
+    'vivasayathuku','thottam','pasana','mazhai','nalla','konjam','ippo','innaiku',
+    'naalaiku','irundha','iruntha','pottu','podanum','evlo','evalavu','eppadi'
+  ]);
+  const tamilHits = tokens.filter((token) => tamilRomanWords.has(token)).length;
+  if (tamilHits >= 2 || (tamilHits >= 1 && tokens.length <= 5)) {
+    return 'Tamil (தமிழ்), in natural everyday Tamil written in Tamil script. Translate the meaning of Tanglish input into a complete Tamil answer; do not reply in Tanglish or English sentences.';
+  }
+
+  // Only use the selected language for a very short ambiguous message; otherwise this turn's language wins.
+  if (tokens.length <= 2 && preferredLanguage && !/^en(?:glish)?$/i.test(preferredLanguage.trim())) {
+    return preferredLanguage;
+  }
+  return 'English. Answer completely in English.';
+}
+
 function buildHistory(seedMessages: ChatMessage[]): { role: 'user' | 'model'; text: string }[] {
   return seedMessages.flatMap((m) =>
     m.role === 'user'
@@ -87,9 +118,11 @@ export function createGeminiSession(
           prompt: text,
           history,
           farmerMemoryContext,
-          preferredLanguage,
+          preferredLanguage: detectReplyLanguage(text, preferredLanguage),
+          // Everyday chat uses the fast model; image analysis keeps the full model.
+          fastMode: true,
         });
-        history = [...history, { role: 'user', text }, { role: 'model', text: response }].slice(-30);
+        history = [...history, { role: 'user', text }, { role: 'model', text: response }].slice(-16);
         return response;
       } finally {
         busy = false;
@@ -113,7 +146,7 @@ export async function askGemini(
     prompt,
     history: [],
     farmerMemoryContext,
-    preferredLanguage,
+    preferredLanguage: detectReplyLanguage(prompt, preferredLanguage),
     fastMode: Boolean(options.fastMode),
   });
 }

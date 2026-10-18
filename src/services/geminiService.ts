@@ -88,8 +88,10 @@ export function createGeminiSession(
           history,
           farmerMemoryContext,
           preferredLanguage,
+          // Everyday chat uses the fast model; image analysis keeps the full model.
+          fastMode: true,
         });
-        history = [...history, { role: 'user', text }, { role: 'model', text: response }].slice(-30);
+        history = [...history, { role: 'user', text }, { role: 'model', text: response }].slice(-16);
         return response;
       } finally {
         busy = false;

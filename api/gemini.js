@@ -136,28 +136,29 @@ async function requestModel(model, contents, systemInstruction, fastMode = false
 async function callGemini(contents, systemInstruction, fastMode = false) {
   if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is missing on the server.');
 
-  const primary = fastMode ? FAST_MODEL : MODEL;
-  // If the fast model is unavailable or overloaded, fall back to the regular
-  // production model instead of making everyday chat fail outright.
-  const candidates = fastMode
-    ? [FAST_MODEL, MODEL, FALLBACK_MODEL].filter((model, index, all) => model && all.indexOf(model) === index)
-    : [MODEL, FALLBACK_MODEL].filter((model, index, all) => model && all.indexOf(model) === index);
+  // Everyday chat tries the fast model first, then escalates to the regular
+  // model and configured fallback. Only the first attempt uses the short
+  // timeout/token budget; fallback attempts need the normal budget to recover
+  // from slow or overloaded fast-model responses.
+  const candidates = (fastMode
+    ? [FAST_MODEL, MODEL, FALLBACK_MODEL]
+    : [MODEL, FALLBACK_MODEL]
+  ).filter((model, index, all) => model && all.indexOf(model) === index);
 
-  // Vercel's configured function budget is 30 seconds. Try each model once
-  // with a bounded timeout rather than retrying a slow model past the request
-  // deadline. The fallback model still gets a chance to answer.
   let lastError = null;
-  for (const model of candidates) {
+  for (let index = 0; index < candidates.length; index += 1) {
+    const model = candidates[index];
+    const useFastBudget = fastMode && index === 0;
     try {
-      return await requestModel(model, contents, systemInstruction, fastMode);
+      return await requestModel(model, contents, systemInstruction, useFastBudget);
     } catch (error) {
       lastError = error;
       const status = Number(error?.status || 0);
       const message = String(error?.message || '');
-      const transient = status === 429 || status === 500 || status === 502 || status === 503 || status === 504 || /overloaded|temporarily unavailable|resource exhausted/i.test(message);
-      // A transient primary-model failure is allowed to fall through to the
-      // configured fallback. Do not retry the same model within this request.
-      if (!transient) continue;
+      const transient = status === 429 || status === 500 || status === 502 || status === 503 || status === 504 || /overloaded|temporarily unavailable|resource exhausted|timed out/i.test(message);
+      // Don't spend time retrying the same model. Any failure may fall through
+      // to a different configured model, while preserving the final useful error.
+      console.warn(`Gemini model attempt failed (${model}, status ${status || 'unknown'}, transient ${transient}).`);
     }
   }
 

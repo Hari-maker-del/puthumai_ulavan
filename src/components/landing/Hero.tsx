@@ -86,7 +86,7 @@ export default function Hero() {
           </div>
 
           <div className="relative overflow-hidden rounded-[1.75rem] border-[5px] border-white bg-[#173F2B] shadow-[0_28px_80px_rgba(28,57,36,0.22)] sm:border-[7px]">
-            <div className="relative min-h-[390px] sm:min-h-[500px]">
+            <div className="relative min-h-[620px] sm:min-h-[500px]">
               <img
                 src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1400&q=85"
                 alt="Green agricultural fields stretching across a sunlit rural landscape"
@@ -94,14 +94,14 @@ export default function Hero() {
                 fetchPriority="high"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#102D1E]/95 via-[#183C27]/30 to-[#193B27]/5" />
-              <div className="absolute inset-x-0 top-0 flex items-center justify-between p-4 sm:p-6">
+              <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-3 p-3 sm:p-6">
                 <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-[#173F2B]/35 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.16em] text-white backdrop-blur-md">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#D6EAAE]" /> Farm intelligence
                 </span>
                 <span className="grid h-10 w-10 place-items-center rounded-full border border-white/30 bg-white/15 text-white backdrop-blur-md"><ArrowUpRight className="h-5 w-5" /></span>
               </div>
 
-              <div className="absolute inset-x-0 bottom-0 p-4 sm:p-7">
+              <div className="absolute inset-x-0 bottom-0 p-3 pt-16 sm:p-7">
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#D6EAAE]">Built around your land</p>
                 <h2 className="mt-2 max-w-md font-display text-3xl font-semibold leading-tight tracking-[-0.04em] text-white sm:text-4xl">
                   From the first seed to the final harvest.
@@ -112,9 +112,9 @@ export default function Hero() {
 
                 <div className="mt-5 grid grid-cols-3 gap-2 sm:gap-3">
                   {farmSignals.map(({ label, value, icon: Icon }) => (
-                    <div key={label} className="rounded-xl border border-white/20 bg-[#F7FAF2]/95 p-3 shadow-lg backdrop-blur-md sm:p-3.5">
+                    <div key={label} className="min-w-0 rounded-xl border border-white/20 bg-[#F7FAF2]/95 p-2.5 shadow-lg backdrop-blur-md sm:p-3.5">
                       <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#E6F0DF] text-[#367347]"><Icon className="h-4 w-4" /></span>
-                      <p className="mt-2 text-[11px] font-bold leading-4 text-[#294735] sm:text-xs">{label}</p>
+                      <p className="mt-2 break-words text-[10px] font-bold leading-4 text-[#294735] sm:text-xs">{label}</p>
                       <p className="mt-1 hidden text-[10px] leading-4 text-[#7B887D] sm:block">{value}</p>
                     </div>
                   ))}

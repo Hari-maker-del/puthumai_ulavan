@@ -38,6 +38,29 @@ function farmerSafeError(error: unknown, copy: ReturnType<typeof getAiCopy>): st
   return `${copy.temporarilyUnavailable}\n\n${copy.unavailableDesc}`;
 }
 
+function renderReplyLine(line: string, index: number) {
+  if (!line.trim()) return <div key={index} className="h-1" />;
+
+  const heading = line.match(/^#{1,3}\s+(.+)$/);
+  const bullet = line.match(/^\s*[-*•]\s+(.+)$/);
+  const numbered = line.match(/^\s*\d+[.)]\s+(.+)$/);
+  const text = heading?.[1] ?? bullet?.[1] ?? numbered?.[1] ?? line;
+  const parts = text.split(/(\*\*.*?\*\*)/g).map((part, partIndex) =>
+    part.startsWith('**') && part.endsWith('**')
+      ? <strong key={partIndex} className="font-bold text-ink-900">{part.slice(2, -2)}</strong>
+      : part,
+  );
+
+  if (heading) return <p key={index} className="mt-2 text-sm font-extrabold text-brand-900">{parts}</p>;
+  if (bullet || numbered) return (
+    <div key={index} className="mt-1 flex items-start gap-2">
+      <span className="mt-0.5 shrink-0 font-bold text-brand-600">{numbered ? line.trim().match(/^\d+/)?.[0] + '.' : '•'}</span>
+      <p className="min-w-0 flex-1">{parts}</p>
+    </div>
+  );
+  return <p key={index} className={index > 0 ? 'mt-1' : ''}>{parts}</p>;
+}
+
 export default function AIAssistantPage() {
   const { user } = useAuth();
   const [copilotContext, setCopilotContext] = useState<CopilotContext | null>(null);
@@ -74,13 +97,20 @@ export default function AIAssistantPage() {
   useEffect(() => { sessionRef.current = null; }, [language]);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, processing]);
 
-  const refreshContext = useCallback(async () => {
+  const contextFetchedAtRef = useRef(0);
+
+  const refreshContext = useCallback(async (force = false) => {
     if (!user?.id) return null;
+    // Farm context (especially live weather) is expensive; reuse it briefly between chat turns.
+    if (!force && contextRef.current && Date.now() - contextFetchedAtRef.current < 120_000) {
+      return contextRef.current;
+    }
     setContextLoading(true);
     setContextError(null);
     try {
       const next = await buildCopilotContext(user.id);
       contextRef.current = next;
+      contextFetchedAtRef.current = Date.now();
       setCopilotContext(next);
       sessionRef.current = null;
       return next;

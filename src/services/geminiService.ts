@@ -84,8 +84,8 @@ function detectReplyLanguage(text: string, preferredLanguage?: string): string {
     return 'Tamil (தமிழ்), in natural everyday Tamil written in Tamil script. Translate the meaning of Tanglish input into a complete Tamil answer; do not reply in Tanglish or English sentences.';
   }
 
-  // Explicit non-English UI preference remains useful for very short prompts.
-  if (preferredLanguage && !/^en(?:glish)?$/i.test(preferredLanguage.trim())) {
+  // Only use the selected language for a very short ambiguous message; otherwise this turn's language wins.
+  if (tokens.length <= 2 && preferredLanguage && !/^en(?:glish)?$/i.test(preferredLanguage.trim())) {
     return preferredLanguage;
   }
   return 'English. Answer completely in English.';
